@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import JobCard from '../components/jobs/JobCard';
 import ParticleNetwork from '../components/layout/ParticleNetwork';
-import Illustrations from '../components/layout/Illustrations';
+
 import { MouseProvider } from '../components/layout/MouseTracker';
 import ParallaxElement from '../components/layout/Parallax';
 
@@ -154,13 +154,8 @@ const Home = () => {
             </div>
           </ParallaxElement>
           
-          {/* Right side: Interactive card stack with illustration */}
+          {/* Right side: Interactive card stack */}
           <div className="md:w-1/2 mt-12 md:mt-0 relative h-[30rem]">
-            {/* Illustration with parallax */}
-            <ParallaxElement depth={-1} className="absolute inset-0 z-0">
-              <Illustrations type="hero" />
-            </ParallaxElement>
-            
             {/* 3D Job Cards */}
             <div className="relative w-80 md:w-96 h-[24rem] mx-auto z-10">
               {activeCards.map((job, index) => (
@@ -198,7 +193,11 @@ const Home = () => {
                 <div className="absolute -top-20 -right-20 w-40 h-40 bg-blue-400/30 rounded-full blur-xl group-hover:translate-x-10 transition-all duration-700"></div>
                 
                 <div className="relative">
-                  <Illustrations type="upload" />
+                  <div className="flex justify-center mb-4">
+                    <svg className="w-16 h-16 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                  </div>
                   <h3 className="text-xl font-bold mb-2 text-gray-800">Upload Your Resume</h3>
                   <p className="text-gray-700">Our AI analyzes your skills and experience to find the best matches for you.</p>
                 </div>
@@ -211,7 +210,11 @@ const Home = () => {
                 <div className="absolute -top-20 -right-20 w-40 h-40 bg-purple-400/30 rounded-full blur-xl group-hover:translate-x-10 transition-all duration-700"></div>
                 
                 <div className="relative">
-                  <Illustrations type="swipe" />
+                  <div className="flex justify-center mb-4">
+                    <svg className="w-16 h-16 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                    </svg>
+                  </div>
                   <h3 className="text-xl font-bold mb-2 text-gray-800">Swipe Through Jobs</h3>
                   <p className="text-gray-700">Swipe right on jobs you like, left on those you don't. It's that simple and efficient.</p>
                 </div>
@@ -224,7 +227,11 @@ const Home = () => {
                 <div className="absolute -top-20 -right-20 w-40 h-40 bg-green-400/30 rounded-full blur-xl group-hover:translate-x-10 transition-all duration-700"></div>
                 
                 <div className="relative">
-                  <Illustrations type="match" />
+                  <div className="flex justify-center mb-4">
+                    <svg className="w-16 h-16 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
                   <h3 className="text-xl font-bold mb-2 text-gray-800">Get Matched</h3>
                   <p className="text-gray-700">When you match with a job, we'll help tailor your application for success.</p>
                 </div>
