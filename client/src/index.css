@@ -27,6 +27,22 @@ body {
   }
 }
 
+/* Add to your index.css */
+@keyframes blob-slow {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
 /* Add these animations to your index.css */
 @keyframes float {
   0% { transform: translateY(0px) rotate(0deg); }
@@ -62,8 +78,38 @@ body {
   20%, 40%, 60%, 80% { transform: translateX(5px); }
 }
 
+/* Add to your index.css file */
+@keyframes float-slow {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes ping-slow {
+  0% { transform: scale(1); opacity: 1; }
+  75%, 100% { transform: scale(2); opacity: 0; }
+}
+
+@keyframes swipe-demo {
+  0% { transform: translateX(0) rotate(0); }
+  25% { transform: translateX(5px) rotate(2deg); }
+  50% { transform: translateX(0) rotate(0); }
+  75% { transform: translateX(-40px) rotate(-10deg); }
+  85% { transform: translateX(-60px) rotate(-15deg); opacity: 0.7; }
+  100% { transform: translateX(-80px) rotate(-20deg); opacity: 0; }
+}
+
+@keyframes draw-check {
+  0% { stroke-dasharray: 200; stroke-dashoffset: 200; }
+  100% { stroke-dasharray: 200; stroke-dashoffset: 0; }
+}
+
 .animate-blob {
   animation: blob 7s infinite;
+}
+
+.animate-blob-slow {
+  animation: blob-slow 25s infinite;
 }
 
 .animate-float {
@@ -84,6 +130,22 @@ body {
 
 .animate-swipe-left {
   animation: swipeLeft 0.8s forwards;
+}
+
+.animate-float-slow {
+  animation: float-slow 6s ease-in-out infinite;
+}
+
+.animate-ping-slow {
+  animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.animate-swipe-demo {
+  animation: swipe-demo 3s ease-in-out infinite;
+}
+
+.animate-draw-check {
+  animation: draw-check 1.5s ease-in-out forwards;
 }
 
 .animation-delay-1000 {

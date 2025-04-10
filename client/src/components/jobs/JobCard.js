@@ -32,7 +32,7 @@ const JobCard = ({ title, company, skills, index, onCardClick }) => {
   
   return (
     <div 
-      className="absolute w-80 md:w-96 bg-white rounded-xl shadow-lg p-6 transition-all duration-300 transform cursor-pointer animate-float"
+      className="absolute w-80 md:w-96 backdrop-blur-md bg-white/80 rounded-xl shadow-lg p-6 transition-all duration-300 transform cursor-pointer animate-float border border-white/50 group"
       style={{ 
         top: `${15 + index * 8}px`, 
         left: `${15 + index * 8}px`,
@@ -44,6 +44,9 @@ const JobCard = ({ title, company, skills, index, onCardClick }) => {
       onMouseLeave={handleMouseLeave}
       onClick={handleClick}
     >
+      {/* Add a light refraction effect */}
+      <div className="absolute -top-20 -right-20 w-40 h-40 bg-blue-400/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+      
       {/* Company logo placeholder */}
       <div className="flex items-center mb-4">
         <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold mr-3">
