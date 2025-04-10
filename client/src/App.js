@@ -7,6 +7,8 @@ import Home from './pages/Home';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import JobPost from './pages/JobPost';
+import SwipePage from './pages/SwipePage';
+import PrivateRoute from './components/auth/PrivateRoute';
 
 function App() {
   return (
@@ -19,7 +21,8 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/post-job" element={<JobPost />} />
+              <Route path="/swipe" element={<PrivateRoute element={<SwipePage />} userType="Job Seeker" />} />
+              <Route path="/post-job" element={<PrivateRoute element={<JobPost />} userType="Employer" />} />
             </Routes>
           </main>
           <Footer />
