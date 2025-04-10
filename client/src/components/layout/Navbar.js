@@ -26,6 +26,15 @@ const Navbar = () => {
                   </Link>
                 )}
                 
+                {user && user.userType === 'Job Seeker' && (
+                  <Link 
+                    to="/matches" 
+                    className="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+                  >
+                    Matches
+                  </Link>
+                )}
+                
                 <button
                   onClick={logout}
                   className="hover:text-blue-200"

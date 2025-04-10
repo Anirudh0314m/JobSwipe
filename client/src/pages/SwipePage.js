@@ -8,9 +8,14 @@ const SwipePage = () => {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [matches, setMatches] = useState([]);
   
   // Track direction for animation
   const [direction, setDirection] = useState(null);
+  
+  // Add state for toast
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
   
   useEffect(() => {
     // Sample data - would come from API in a real implementation
@@ -75,8 +80,34 @@ const SwipePage = () => {
     // Save swipe direction for animation
     setDirection(swipeDirection);
     
+    const currentJob = jobs[currentIndex];
+    
+    // If swiped right, add to matches
+    if (swipeDirection === 'right') {
+      // In a real app, you would send this to your API
+      console.log(`Matched with job: ${currentJob.id}`);
+      setMatches(prev => [...prev, {
+        ...currentJob,
+        matchedOn: new Date().toISOString(),
+        status: 'new'
+      }]);
+      
+      // Show toast notification
+      setToastMessage(`Matched with ${currentJob.title} at ${currentJob.company}!`);
+      setShowToast(true);
+      
+      // Hide toast after 3 seconds
+      setTimeout(() => {
+        setShowToast(false);
+      }, 3000);
+      
+      // Show toast notification
+      // If you have a toast library, you could use it here
+      // For now, we'll just update UI state
+    }
+    
     // Log the swipe action (would send to API in real app)
-    console.log(`Swiped ${swipeDirection} on job ${jobs[currentIndex].id}`);
+    console.log(`Swiped ${swipeDirection} on job ${currentJob.id}`);
     
     // Move to next card
     setTimeout(() => {
@@ -176,7 +207,7 @@ const SwipePage = () => {
             <p className="text-xs text-gray-500">Jobs Viewed</p>
           </div>
           <div className="bg-white p-4 rounded-lg shadow text-center">
-            <p className="text-2xl font-bold text-green-600">0</p>
+            <p className="text-2xl font-bold text-green-600">{matches.length}</p>
             <p className="text-xs text-gray-500">Matches</p>
           </div>
           <div className="bg-white p-4 rounded-lg shadow text-center">
@@ -185,6 +216,17 @@ const SwipePage = () => {
           </div>
         </div>
       </div>
+      
+      {showToast && (
+        <div className="fixed bottom-6 inset-x-0 flex justify-center px-4">
+          <div className="bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2 animate-fade-in-up">
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>{toastMessage}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
