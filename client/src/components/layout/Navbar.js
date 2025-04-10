@@ -35,6 +35,15 @@ const Navbar = () => {
                   </Link>
                 )}
                 
+                {user && (
+                  <Link 
+                    to="/profile" 
+                    className="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+                  >
+                    Profile
+                  </Link>
+                )}
+                
                 <button
                   onClick={logout}
                   className="hover:text-blue-200"

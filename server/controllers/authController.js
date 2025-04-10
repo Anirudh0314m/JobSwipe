@@ -1,30 +1,44 @@
 const User = require('../models/User');
+const bcrypt = require('bcryptjs');
 
 // @desc    Register user
 // @route   POST /api/auth/register
 // @access  Public
 exports.register = async (req, res) => {
   try {
-    const { email, password, userType } = req.body;
-
-    // Check if user exists
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-      return res.status(400).json({ msg: 'User already exists' });
+    const { name, email, password, userType } = req.body;
+    
+    // Validate inputs
+    if (!name || !email || !password || !userType) {
+      return res.status(400).json({ message: 'Please provide all required fields' });
     }
-
-    // Create user
-    const user = await User.create({
+    
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User already exists with this email' });
+    }
+    
+    // Create new user
+    const user = new User({
+      name,  // Make sure this field is included
       email,
       password,
       userType
     });
-
+    
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(password, salt);
+    
+    // Save user
+    await user.save();
+    
     // Send token response
     sendTokenResponse(user, 201, res);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({ message: 'Server error' });
   }
 };
 

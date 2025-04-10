@@ -1,9 +1,12 @@
-
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const UserSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true
+  },
   email: {
     type: String,
     required: [true, 'Please add an email'],
@@ -21,8 +24,31 @@ const UserSchema = new mongoose.Schema({
   },
   userType: {
     type: String,
-    enum: ['Job Seeker', 'Job Poster'],
+    enum: ['Job Seeker', 'Employer'],
     required: [true, 'Please specify user type']
+  },
+  // New profile fields
+  title: {
+    type: String
+  },
+  location: {
+    type: String
+  },
+  dateOfBirth: {
+    type: String
+  },
+  about: {
+    type: String
+  },
+  skills: {
+    type: [String]
+  },
+  // Resume data
+  resume: {
+    filename: String,
+    path: String,
+    mimeType: String,
+    uploadDate: Date
   },
   createdAt: {
     type: Date,

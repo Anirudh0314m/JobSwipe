@@ -1,34 +1,26 @@
-
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+// Use environment variable for JWT secret
+const JWT_SECRET = process.env.JWT_SECRET;
+
 exports.protect = async (req, res, next) => {
-  let token;
+  // Get token from header
+  const token = req.header('x-auth-token') || req.header('Authorization')?.replace('Bearer ', '');
 
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
-  ) {
-    // Get token from header
-    token = req.headers.authorization.split(' ')[1];
-  }
-
-  // Check if token exists
+  // Check if no token
   if (!token) {
-    return res.status(401).json({ msg: 'Not authorized to access this route' });
+    return res.status(401).json({ msg: 'No token, authorization denied' });
   }
 
+  // Verify token
   try {
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Get user from the token
+    const decoded = jwt.verify(token, JWT_SECRET);
     req.user = await User.findById(decoded.id);
-
     next();
   } catch (err) {
-    console.error(err);
-    res.status(401).json({ msg: 'Not authorized to access this route' });
+    console.error('Token verification error:', err.message);
+    res.status(401).json({ msg: 'Token is not valid' });
   }
 };
 

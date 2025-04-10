@@ -10,6 +10,7 @@ import JobPost from './pages/JobPost';
 import SwipePage from './pages/SwipePage';
 import PrivateRoute from './components/auth/PrivateRoute';
 import MatchesPage from './pages/MatchesPage';
+import ProfilePage from './pages/ProfilePage';
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
               <Route path="/swipe" element={<PrivateRoute element={<SwipePage />} userType="Job Seeker" />} />
               <Route path="/post-job" element={<PrivateRoute element={<JobPost />} userType="Employer" />} />
               <Route path="/matches" element={<PrivateRoute element={<MatchesPage />} userType="Job Seeker" />} />
+              <Route path="/profile" element={<PrivateRoute element={<ProfilePage />} />} />
             </Routes>
           </main>
           <Footer />
