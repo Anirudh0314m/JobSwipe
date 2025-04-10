@@ -49,7 +49,7 @@ const UserSchema = new mongoose.Schema({
     path: String,
     mimeType: String,
     uploadDate: Date
-  },
+  }, 
   createdAt: {
     type: Date,
     default: Date.now

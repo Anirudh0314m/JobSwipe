@@ -98,21 +98,14 @@ const ProfilePage = () => {
   };
   
   const handleResumeChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // Check file type
-      const fileType = file.type;
-      if (fileType === 'application/pdf' || 
-          fileType === 'application/msword' || 
-          fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-        setResume(file);
-      } else {
-        alert('Please upload a PDF or Word document');
-      }
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      console.log("Selected file:", file); // Debug log
+      setResume(file);
     }
   };
   
-  // Replace the handleResumeUpload function with a real API call
+  // Update error handling in handleResumeUpload
   const handleResumeUpload = async () => {
     if (!resume) return;
     
@@ -124,7 +117,7 @@ const ProfilePage = () => {
     formData.append('resume', resume);
     
     try {
-      // Simulate progress with an interval
+      // Show progress
       const interval = setInterval(() => {
         setUploadProgress(prev => {
           if (prev >= 95) {
@@ -135,7 +128,7 @@ const ProfilePage = () => {
         });
       }, 100);
       
-      // Make API request
+      // Make the API request
       const res = await api.post('/api/profile/resume', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
@@ -145,10 +138,10 @@ const ProfilePage = () => {
       clearInterval(interval);
       setUploadProgress(100);
       
-      // Update the resume object with response data
+      // Update resume state with returned data
       setResume({
-        ...resume,
-        url: `/api/profile/resume/${res.data.resume.filename}`, // This would be a real URL to view the resume
+        name: resume.name,
+        url: `/uploads/resumes/${path.basename(resume.name)}`,
         uploadDate: res.data.resume.uploadDate
       });
       
@@ -156,9 +149,10 @@ const ProfilePage = () => {
       setSuccessMessage('Resume uploaded successfully!');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err) {
-      console.error('Error uploading resume:', err);
+      console.error('Error uploading resume:', err.response?.data?.message || err.message);
       setUploading(false);
-      // Show error message
+      setSuccessMessage(`Error: ${err.response?.data?.message || 'Failed to upload resume'}`);
+      setTimeout(() => setSuccessMessage(''), 3000);
     }
   };
   
@@ -409,7 +403,7 @@ const ProfilePage = () => {
                             <span>{resume ? 'Change file' : 'Upload a file'}</span>
                             <input
                               id="resume-upload"
-                              name="resume-upload"
+                              name="resume"  // Make sure this is 'resume' to match the backend
                               type="file"
                               className="sr-only"
                               onChange={handleResumeChange}

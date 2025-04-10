@@ -96,33 +96,46 @@ router.post('/', protect, async (req, res) => {
 // @route   POST api/profile/resume
 // @desc    Upload resume
 // @access  Private
-router.post('/resume', [protect, upload.single('resume')], async (req, res) => {
+router.post('/resume', protect, upload.single('resume'), async (req, res) => {
   try {
+    console.log('Resume upload request received');
+    
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' });
     }
     
     const user = await User.findById(req.user.id);
     
-    // Check if old resume exists before attempting to delete
-    if (user.resume && user.resume.path && fs.existsSync(user.resume.path)) {
-      try {
-        fs.unlinkSync(user.resume.path);
-      } catch (err) {
-        console.error('Error deleting old resume:', err);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Delete old resume if it exists
+    if (user.resume && user.resume.path && typeof user.resume.path === 'string') {
+      const fullPath = path.resolve(user.resume.path);
+      if (fs.existsSync(fullPath)) {
+        try {
+          fs.unlinkSync(fullPath);
+          console.log('Old resume deleted');
+        } catch (err) {
+          console.error('Error deleting old resume:', err);
+        }
       }
     }
     
-    // Update user with new resume - ensure path is always a string
+    // Update user with new resume
     user.resume = {
       filename: req.file.originalname,
-      path: req.file.path || '', // Ensure path is never undefined
+      path: req.file.path,
       mimeType: req.file.mimetype,
       uploadDate: Date.now()
     };
     
+    console.log('Saving user with resume:', user.resume);
     await user.save();
+    console.log('User saved successfully');
     
+    // Return response with filename and uploadDate
     res.json({
       message: 'Resume uploaded successfully',
       resume: {
@@ -131,8 +144,8 @@ router.post('/resume', [protect, upload.single('resume')], async (req, res) => {
       }
     });
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
+    console.error('Resume upload error:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 
@@ -143,18 +156,27 @@ router.get('/resume', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     
-    if (!user || !user.resume) {
-      return res.status(404).json({ message: 'No resume found' });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
+    
+    // Check if user has a resume
+    if (!user.resume || !user.resume.filename) {
+      return res.status(404).json({ message: 'No resume found for this user' });
+    }
+    
+    // Ensure we have a path to work with
+    const resumePath = user.resume.path || '';
+    const filename = path.basename(resumePath);
     
     res.json({
       filename: user.resume.filename,
       uploadDate: user.resume.uploadDate,
-      url: `/uploads/resumes/${path.basename(user.resume.path)}`
+      url: `/uploads/resumes/${filename}`
     });
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
+    console.error('Error fetching resume:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 
@@ -163,20 +185,27 @@ router.get('/resume/:filename', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     
-    // Check if the user has a resume with a valid path
-    if (!user.resume || !user.resume.path) {
+    if (!user || !user.resume) {
       return res.status(404).json({ message: 'No resume found' });
     }
     
-    // Safety check to ensure path exists
-    if (!fs.existsSync(user.resume.path)) {
+    // Check if the requested file belongs to the user
+    const resumeFileName = path.basename(user.resume.path || '');
+    if (resumeFileName !== req.params.filename) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+    
+    // Get the full path to the file
+    const resumePath = path.resolve(user.resume.path);
+    
+    if (!fs.existsSync(resumePath)) {
       return res.status(404).json({ message: 'Resume file not found' });
     }
     
-    // Serve the file with a resolved path
-    res.sendFile(path.resolve(user.resume.path));
+    // Serve the file
+    res.sendFile(resumePath);
   } catch (err) {
-    console.error(err);
+    console.error('Error serving resume file:', err);
     res.status(500).send('Server Error');
   }
 });

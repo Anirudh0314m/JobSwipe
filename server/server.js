@@ -26,6 +26,12 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
+// Create resume uploads directory if it doesn't exist
+const resumeUploadsDir = path.join(__dirname, 'uploads', 'resumes');
+if (!fs.existsSync(resumeUploadsDir)) {
+  fs.mkdirSync(resumeUploadsDir, { recursive: true });
+}
+
 // Serve static files from the uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
