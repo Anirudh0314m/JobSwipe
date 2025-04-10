@@ -104,6 +104,20 @@ body {
   100% { stroke-dasharray: 200; stroke-dashoffset: 0; }
 }
 
+@keyframes success {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 .animate-blob {
   animation: blob 7s infinite;
 }
@@ -148,6 +162,10 @@ body {
   animation: draw-check 1.5s ease-in-out forwards;
 }
 
+.animate-success {
+  animation: success 0.6s ease-out forwards;
+}
+
 .animation-delay-1000 {
   animation-delay: 1s;
 }
@@ -162,4 +180,27 @@ body {
 
 .animation-delay-4000 {
   animation-delay: 4s;
+}
+
+/* Add to your index.css */
+.translate-z-10 {
+  transform: translateZ(10px);
+}
+
+.hover\:translate-z-10:hover {
+  transform: translateZ(10px);
+}
+
+.will-change-transform {
+  will-change: transform;
+}
+
+/* Smooth scroll for parallax effect */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Ensure 3D transforms work properly */
+.preserve-3d {
+  transform-style: preserve-3d;
 }

@@ -1,21 +1,54 @@
 // src/components/jobs/JobCard.js
-// Enhanced JobCard.js with mouse interaction
 import React, { useState } from 'react';
+import { useMousePosition } from '../layout/MouseTracker';
 
 const JobCard = ({ title, company, skills, index, onCardClick }) => {
-  const [tiltData, setTiltData] = useState({ x: 0, y: 0 });
+  const [isHovered, setIsHovered] = useState(false);
+  const mousePosition = useMousePosition();
   
-  const handleMouseMove = (e) => {
-    const card = e.currentTarget;
-    const rect = card.getBoundingClientRect();
-    const x = e.clientX - rect.left - rect.width / 2;
-    const y = e.clientY - rect.top - rect.height / 2;
-    
-    setTiltData({ x: x / 25, y: y / -25 });
+  const handleMouseEnter = () => {
+    setIsHovered(true);
   };
   
   const handleMouseLeave = () => {
-    setTiltData({ x: 0, y: 0 });
+    setIsHovered(false);
+  };
+  
+  const handleMouseMove = (e) => {
+    if (!isHovered) return;
+    
+    const card = e.currentTarget;
+    const rect = card.getBoundingClientRect();
+    
+    // Calculate the center of the card
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    // Calculate how far the mouse is from the center
+    const x = (mousePosition.x - centerX) / (rect.width / 2);
+    const y = (mousePosition.y - centerY) / (rect.height / 2);
+    
+    // Calculate rotation (max 15 degrees)
+    const rotateX = y * -10; 
+    const rotateY = x * 10;
+    
+    // Apply transform
+    card.style.transform = `
+      perspective(1000px) 
+      rotateX(${rotateX}deg) 
+      rotateY(${rotateY}deg) 
+      scale3d(${isHovered ? 1.05 : 1}, ${isHovered ? 1.05 : 1}, 1)
+      translateZ(0)
+    `;
+    
+    // Dynamic shadow based on rotation
+    const shadowX = x * 15;
+    const shadowY = y * 15;
+    card.style.boxShadow = `
+      ${shadowX}px ${shadowY}px 30px rgba(0, 0, 0, 0.15),
+      0 4px 8px rgba(0, 0, 0, 0.1),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.1)
+    `;
   };
   
   const handleClick = (e) => {
@@ -32,36 +65,42 @@ const JobCard = ({ title, company, skills, index, onCardClick }) => {
   
   return (
     <div 
-      className="absolute w-80 md:w-96 backdrop-blur-md bg-white/80 rounded-xl shadow-lg p-6 transition-all duration-300 transform cursor-pointer animate-float border border-white/50 group"
+      className={`absolute w-80 md:w-96 backdrop-blur-md bg-white/90 rounded-xl p-6 transition-all duration-200 transform cursor-pointer animate-float border border-white/50 will-change-transform`}
       style={{ 
         top: `${15 + index * 8}px`, 
         left: `${15 + index * 8}px`,
         animationDelay: `${index * 0.5}s`,
         zIndex: 10 - index,
-        transform: `perspective(1000px) rotateX(${tiltData.y}deg) rotateY(${tiltData.x}deg) scale(${index === 0 ? 1 : 0.95 - index * 0.05})`,
       }}
-      onMouseMove={handleMouseMove}
+      onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onMouseMove={handleMouseMove}
       onClick={handleClick}
     >
-      {/* Add a light refraction effect */}
-      <div className="absolute -top-20 -right-20 w-40 h-40 bg-blue-400/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+      {/* Light refraction effect */}
+      <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-400/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
       
-      {/* Company logo placeholder */}
+      {/* Company logo with 3D effect */}
       <div className="flex items-center mb-4">
-        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold mr-3">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold mr-3 shadow-lg transform transition-transform duration-200" 
+             style={{ transform: isHovered ? 'translateZ(20px)' : 'translateZ(0)' }}>
           {company.charAt(0)}
         </div>
-        <div>
+        <div style={{ transform: isHovered ? 'translateZ(15px)' : 'translateZ(0)', transition: 'transform 0.2s ease-out' }}>
           <div className="text-sm font-semibold text-blue-600">{company}</div>
           <div className="text-xs text-gray-500">Posted 2 days ago</div>
         </div>
       </div>
       
-      <h3 className="text-xl font-bold mb-3 text-gray-800">{title}</h3>
+      {/* Job title with 3D effect */}
+      <h3 className="text-xl font-bold mb-3 text-gray-800 transition-transform duration-200"
+          style={{ transform: isHovered ? 'translateZ(25px)' : 'translateZ(0)' }}>
+        {title}
+      </h3>
       
-      {/* Add more job details */}
-      <div className="mb-4 text-gray-600 text-sm">
+      {/* Job details with subtle 3D effect */}
+      <div className="mb-4 text-gray-600 text-sm transition-transform duration-200"
+           style={{ transform: isHovered ? 'translateZ(10px)' : 'translateZ(0)' }}>
         <div className="flex items-center mb-1">
           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -77,20 +116,21 @@ const JobCard = ({ title, company, skills, index, onCardClick }) => {
         </div>
       </div>
       
-      <div className="flex flex-wrap gap-1 mt-2">
+      {/* Skills tags with staggered 3D effect */}
+      <div className="flex flex-wrap gap-1 mt-2 transition-transform duration-200"
+           style={{ transform: isHovered ? 'translateZ(15px)' : 'translateZ(0)' }}>
         {skills.map((skill, i) => (
           <span 
             key={i}
-            className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded"
+            className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded transition-transform duration-200"
+            style={{ transform: isHovered ? `translateZ(${15 + i * 2}px)` : 'translateZ(0)' }}
           >
             {skill}
           </span>
         ))}
       </div>
       
-      {/* Swipe indicators - only visible on the top card */}
-
-    </div>
+       </div>
   );
 };
 
