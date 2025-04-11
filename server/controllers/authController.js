@@ -21,13 +21,13 @@ exports.register = async (req, res) => {
     
     // Create new user
     const user = new User({
-      name,  // Make sure this field is included
+      name,
       email,
       password,
       userType
     });
     
-    // Hash password
+    // Hash password directly here rather than relying on middleware
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(password, salt);
     

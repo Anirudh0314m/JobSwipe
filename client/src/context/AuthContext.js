@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
@@ -61,9 +60,15 @@ export const AuthProvider = ({ children }) => {
         
         setUser(res.data.user);
         setError(null);
+        return true;
+      } else {
+        // Handle case where success is false
+        setError(res.data.msg || 'Login failed');
+        return false;
       }
     } catch (err) {
       setError(err.response?.data?.msg || 'Login failed');
+      return false;
     } finally {
       setLoading(false);
     }

@@ -24,7 +24,7 @@ const UserSchema = new mongoose.Schema({
   },
   userType: {
     type: String,
-    enum: ['Job Seeker', 'Employer'],
+    enum: ['Job Seeker', 'Employer', 'Job Poster'],
     required: [true, 'Please specify user type']
   },
   // New profile fields
@@ -58,13 +58,18 @@ const UserSchema = new mongoose.Schema({
 
 // Encrypt password using bcrypt
 UserSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) {
-    next();
-    return;
-  }
+  // TEMPORARILY DISABLED - this was causing double hashing
+  // Just pass through to avoid double hashing the password
+  next();
+  return;
 
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
+  // if (!this.isModified('password')) {
+  //   next();
+  //   return;
+  // }
+
+  // const salt = await bcrypt.genSalt(10);
+  // this.password = await bcrypt.hash(this.password, salt);
 });
 
 // Sign JWT and return

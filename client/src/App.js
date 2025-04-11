@@ -24,7 +24,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/swipe" element={<PrivateRoute element={<SwipePage />} userType="Job Seeker" />} />
-              <Route path="/post-job" element={<PrivateRoute element={<JobPost />} userType="Employer" />} />
+              <Route path="/post-job" element={<PrivateRoute element={<JobPost />} userType="Job Poster" />} />
               <Route path="/matches" element={<PrivateRoute element={<MatchesPage />} userType="Job Seeker" />} />
               <Route path="/profile" element={<PrivateRoute element={<ProfilePage />} />} />
             </Routes>
