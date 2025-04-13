@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useContext } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 import JobCard from '../components/jobs/JobCard';
 import ParticleNetwork from '../components/layout/ParticleNetwork';
-
 import { MouseProvider } from '../components/layout/MouseTracker';
 import ParallaxElement from '../components/layout/Parallax';
 
@@ -36,9 +36,22 @@ const sampleJobs = [
 ];
 
 const Home = () => {
+  const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [activeCards, setActiveCards] = useState(sampleJobs.slice(0, 3));
   const [swipingCard, setSwipingCard] = useState(null);
   const [swipingDirection, setSwipingDirection] = useState(null);
+  
+  // Redirect authenticated users to appropriate pages
+  useEffect(() => {
+    if (user) {
+      if (user.userType === 'Job Seeker') {
+        navigate('/swipe');
+      } else if (user.userType === 'Job Poster') {
+        navigate('/post-job');
+      }
+    }
+  }, [user, navigate]);
   
   // Animation for periodic card swiping
   useEffect(() => {

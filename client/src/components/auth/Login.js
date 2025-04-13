@@ -9,6 +9,9 @@ const Login = () => {
     password: ''
   });
   
+  // Add state for remember me checkbox (default to true)
+  const [rememberMe, setRememberMe] = useState(true);
+  
   const { login, user, error, loading } = useContext(AuthContext);
   const navigate = useNavigate();
   
@@ -33,9 +36,15 @@ const Login = () => {
     }));
   };
   
+  // Add handler for remember me checkbox
+  const handleRememberMeChange = (e) => {
+    setRememberMe(e.target.checked);
+  };
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await login(formData);
+    // Pass rememberMe state to login function
+    await login(formData, rememberMe);
   };
   
   return (
@@ -201,6 +210,8 @@ const Login = () => {
                   name="remember-me"
                   type="checkbox"
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  checked={rememberMe}
+                  onChange={handleRememberMeChange}
                 />
                 <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
                   Remember me

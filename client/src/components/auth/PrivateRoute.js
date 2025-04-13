@@ -1,11 +1,31 @@
-import React, { useContext } from 'react';
-import { Navigate } from 'react-router-dom';
+import React, { useContext, useEffect } from 'react';
+import { Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 
 const PrivateRoute = ({ element, userType }) => {
   const { user, loading } = useContext(AuthContext);
+  const navigate = useNavigate();
+  const location = useLocation();
   
-  // If auth is still loading, show a loading spinner
+  // Effect to handle redirection based on user type when component mounts or updates
+  useEffect(() => {
+    // Only run this logic when we have a user loaded and we're not in a loading state
+    if (!loading && user) {
+      // Use different redirection strategy based on route requirements and user type
+      if (userType && user.userType !== userType) {
+        // Debug log to see when redirects happen
+        console.log(`User type mismatch - Required: ${userType}, User is: ${user.userType}`);
+        
+        // Determine the home route for this user type
+        const homeRoute = user.userType === 'Job Seeker' ? '/swipe' : '/post-job';
+        
+        // Navigate programmatically to avoid refresh
+        navigate(homeRoute, { replace: true });
+      }
+    }
+  }, [user, loading, userType, navigate, location.pathname]);
+  
+  // Show loading spinner
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -14,20 +34,19 @@ const PrivateRoute = ({ element, userType }) => {
     );
   }
   
-  // If user is not logged in, redirect to login
+  // If not logged in, redirect to login
   if (!user) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
   
-  // If userType is specified and doesn't match, redirect to appropriate page
-  if (userType && user.userType !== userType) {
-    return user.userType === 'Job Seeker' 
-      ? <Navigate to="/swipe" />
-      : <Navigate to="/post-job" />;
+  // If no specific userType is required or the userType matches, render the component
+  if (!userType || user.userType === userType) {
+    return element;
   }
   
-  // Render the protected component
-  return element;
-};
+  // This is a fallback - the useEffect should handle the redirection before we get here
+  // But just to be safe, we'll return null to avoid rendering the wrong component
+  return null;
+}
 
 export default PrivateRoute;
