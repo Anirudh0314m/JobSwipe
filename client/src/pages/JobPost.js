@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import Autocomplete from '../components/common/Autocomplete';
 import PhoneInput from '../components/common/PhoneInput';
@@ -14,6 +14,14 @@ const locationSuggestions = ['Remote', 'Remote - US Only', ...countries, ...usSt
 const PostJobPage = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
+  const location = useLocation(); // Get location for query params
+  
+  // Get jobId from query params for editing
+  const queryParams = new URLSearchParams(location.search);
+  const editJobId = queryParams.get('edit');
+  
+  // Set page title based on edit mode
+  const [isEditMode, setIsEditMode] = useState(false);
   
   // Multi-step form state
   const [currentStep, setCurrentStep] = useState(1);
@@ -248,6 +256,70 @@ const PostJobPage = () => {
     }
   };
   
+  // Load job data if in edit mode
+  useEffect(() => {
+    const fetchJobForEditing = async () => {
+      if (!editJobId) return;
+      
+      try {
+        setLoading(true);
+        
+        // Get the auth token from localStorage
+        const token = localStorage.getItem('token');
+        
+        // Configure headers for the request
+        const config = {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-auth-token': token
+          }
+        };
+        
+        // Fetch the job data
+        const response = await axios.get(`/api/jobs/${editJobId}`, config);
+        const jobData = response.data.data || response.data;
+        
+        setIsEditMode(true);
+        
+        // Update form data with job values
+        setFormData({
+          ...formData,
+          title: jobData.title || '',
+          company: jobData.company || user?.company || '',
+          description: jobData.description || '',
+          requirements: jobData.requirements || '',
+          location: jobData.location || '',
+          isRemote: jobData.isRemote || false,
+          country: jobData.country || '',
+          city: jobData.city || '',
+          salary: jobData.salary || '',
+          salaryMin: jobData.salaryMin || '',
+          salaryMax: jobData.salaryMax || '',
+          salaryPeriod: jobData.salaryPeriod || 'yearly',
+          employmentType: jobData.employmentType || 'Full-time',
+          workSchedule: jobData.workSchedule || [],
+          benefits: jobData.benefits || [],
+          education: jobData.education || 'None',
+          experience: jobData.experience || 'No experience',
+          applicationInstructions: jobData.applicationInstructions || '',
+          applicationDeadline: jobData.applicationDeadline ? new Date(jobData.applicationDeadline).toISOString().split('T')[0] : '',
+          skills: jobData.skills || [],
+          screeningQuestions: jobData.screeningQuestions || [],
+          phoneNumber: jobData.phoneNumber || ''
+        });
+        
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching job for editing:', err);
+        setError('Failed to load job data for editing.');
+        setLoading(false);
+      }
+    };
+    
+    fetchJobForEditing();
+  }, [editJobId, user]);
+  
+  // Modify handleSubmit to support both creating and updating jobs
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -261,18 +333,26 @@ const PostJobPage = () => {
         salaryMax: formData.salaryMax ? Number(formData.salaryMax) : undefined
       };
       
-      // Submit to API
-      const response = await axios.post('/api/jobs', submitData);
+      let response;
       
-      console.log('Job posting created:', response.data);
+      // Check if we're editing or creating
+      if (isEditMode && editJobId) {
+        // Update existing job
+        response = await axios.put(`/api/jobs/${editJobId}`, submitData);
+      } else {
+        // Create new job
+        response = await axios.post('/api/jobs', submitData);
+      }
+      
+      console.log('Job operation successful:', response.data);
       
       setSuccess(true);
-      setLoading(false); // Stop loading after success
+      setLoading(false);
       
       // No automatic navigation - user will need to click a button
     } catch (err) {
-      console.error('Error posting job:', err);
-      setError(err.response?.data?.message || 'Failed to post job. Please try again.');
+      console.error(`Error ${isEditMode ? 'updating' : 'posting'} job:`, err);
+      setError(err.response?.data?.message || `Failed to ${isEditMode ? 'update' : 'post'} job. Please try again.`);
       setLoading(false);
     }
   };
@@ -1110,7 +1190,9 @@ const PostJobPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 px-4 py-10">
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-md overflow-hidden">
         <div className="px-6 py-8">
-          <h1 className="text-2xl font-bold text-gray-800 mb-8">Post a New Job</h1>
+          <h1 className="text-2xl font-bold text-gray-800 mb-8">
+            {isEditMode ? 'Edit Job Posting' : 'Post a New Job'}
+          </h1>
           
           {/* Progress indicator */}
           {renderProgressBar()}
@@ -1124,7 +1206,9 @@ const PostJobPage = () => {
                   </svg>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium text-green-800">Job posted successfully!</p>
+                  <p className="text-sm font-medium text-green-800">
+                    Job {isEditMode ? 'updated' : 'posted'} successfully!
+                  </p>
                   {/* Add buttons for next actions */}
                   <div className="mt-3 flex space-x-3">
                     <button
@@ -1203,10 +1287,10 @@ const PostJobPage = () => {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Posting Job...
+                      {isEditMode ? 'Updating Job...' : 'Posting Job...'}
                     </>
                   ) : (
-                    'Post Job'
+                    isEditMode ? 'Update Job' : 'Post Job'
                   )}
                 </button>
               )}

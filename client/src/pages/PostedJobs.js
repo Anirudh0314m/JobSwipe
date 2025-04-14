@@ -8,11 +8,13 @@ const PostedJobs = () => {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     const fetchPostedJobs = async () => {
       try {
         setLoading(true);
+        
         // Get the auth token from localStorage
         const token = localStorage.getItem('token');
         
@@ -27,36 +29,27 @@ const PostedJobs = () => {
         // Get jobs from the API
         const response = await axios.get('/api/jobs', config);
         
-        // Handle different response formats - inspect the response structure first
-        console.log('API Response:', response.data);
+        // Extract jobs from the correct location in the response
+        // The API response structure is: {success: true, count: 8, data: Array(8)}
+        const jobsArray = response.data.data || [];
         
-        let jobsArray = [];
-        if (Array.isArray(response.data)) {
-          // Response is already an array
-          jobsArray = response.data;
-        } else if (response.data.jobs && Array.isArray(response.data.jobs)) {
-          // Response has a jobs property that is an array
-          jobsArray = response.data.jobs;
-        } else if (response.data.data && Array.isArray(response.data.data)) {
-          // Response has a data property that is an array
-          jobsArray = response.data.data;
+        console.log('Current User:', user);
+        console.log('Jobs from API:', jobsArray);
+        
+        // Since we don't have user IDs in the jobs, match by company name
+        // If we don't have a company name for the user, show all jobs for now
+        let userJobs = [];
+        
+        if (user?.company) {
+          userJobs = jobsArray.filter(job => job.company === user.company);
+          console.log(`Filtering jobs for company: ${user.company}`);
         } else {
-          // Fallback: try to extract any array property from the response
-          const arrayProps = Object.keys(response.data).filter(key => Array.isArray(response.data[key]));
-          if (arrayProps.length > 0) {
-            jobsArray = response.data[arrayProps[0]];
-          } else {
-            // If we can't find an array, use an empty array
-            console.error('Could not find jobs array in API response');
-            jobsArray = [];
-          }
+          // For testing/development, show all jobs
+          console.log('No company associated with user - showing all jobs');
+          userJobs = jobsArray;
         }
         
-        // Filter jobs for the current user 
-        const userJobs = jobsArray.filter(job => 
-          (job.postedBy && job.postedBy === user?.id) || 
-          (job.company && job.company === user?.company)
-        );
+        console.log('Jobs to display:', userJobs);
         
         setJobs(userJobs);
         setLoading(false);
@@ -67,8 +60,44 @@ const PostedJobs = () => {
       }
     };
 
-    fetchPostedJobs();
+    if (user) {
+      fetchPostedJobs();
+    }
   }, [user]);
+
+  // Add delete job functionality
+  const handleDeleteJob = async (jobId) => {
+    if (!window.confirm('Are you sure you want to delete this job posting?')) {
+      return;
+    }
+    
+    try {
+      setDeleteLoading(true);
+      
+      // Get the auth token from localStorage
+      const token = localStorage.getItem('token');
+      
+      // Configure headers for the request
+      const config = {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-auth-token': token
+        }
+      };
+      
+      // Delete the job
+      await axios.delete(`/api/jobs/${jobId}`, config);
+      
+      // Update the jobs list by removing the deleted job
+      setJobs(jobs.filter(job => job._id !== jobId));
+      
+      setDeleteLoading(false);
+    } catch (err) {
+      console.error('Error deleting job:', err);
+      alert('Failed to delete job. Please try again.');
+      setDeleteLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -150,15 +179,17 @@ const PostedJobs = () => {
                       </div>
                       <div className="mt-4 flex space-x-3">
                         <Link 
-                          to={`/edit-job/${job._id}`} 
+                          to={`/post-job?edit=${job._id}`} 
                           className="inline-flex items-center px-3 py-1 border border-gray-300 text-sm font-medium rounded text-gray-700 bg-white hover:bg-gray-50"
                         >
                           Edit
                         </Link>
                         <button 
-                          className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded text-white bg-red-600 hover:bg-red-700"
+                          onClick={() => handleDeleteJob(job._id)}
+                          disabled={deleteLoading}
+                          className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded text-white bg-red-600 hover:bg-red-700 disabled:bg-red-300"
                         >
-                          Delete
+                          {deleteLoading ? 'Deleting...' : 'Delete'}
                         </button>
                       </div>
                     </div>
