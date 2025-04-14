@@ -5,7 +5,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const User = require('../models/User');
-
+const aiService = require('../utils/aiService'); // Import the AI service
 
 // Set up multer for file uploads
 const storage = multer.diskStorage({
@@ -131,16 +131,72 @@ router.post('/resume', protect, upload.single('resume'), async (req, res) => {
       uploadDate: Date.now()
     };
     
+    let extractedSkills = [];
+    
+    // Extract text and skills from the resume using AI service
+    try {
+      // Extract text from the resume
+      const resumeText = await aiService.extractResumeText(req.file.path);
+      
+      // Extract skills from the resume text
+      extractedSkills = aiService.extractSkills(resumeText);
+      
+      console.log('AI extracted skills:', extractedSkills);
+      
+      // FIXED: Initialize skills array if it doesn't exist
+      if (!user.skills) {
+        user.skills = [];
+      }
+      
+      // FIXED: Ensure skills is treated as an array
+      const currentSkills = Array.isArray(user.skills) ? user.skills : [];
+      
+      // Create a set of lowercase existing skills for comparison
+      const existingSkillsSet = new Set(currentSkills.map(skill => skill.toLowerCase()));
+      
+      // Add new skills if they're not duplicates
+      if (extractedSkills && Array.isArray(extractedSkills)) {
+        extractedSkills.forEach(skill => {
+          if (!existingSkillsSet.has(skill.toLowerCase())) {
+            currentSkills.push(skill);
+          }
+        });
+      }
+      
+      // Update the user's skills array
+      user.skills = currentSkills;
+      
+      console.log('Updated user skills:', user.skills);
+      
+      // Store the extracted skills in the user's resume object for future reference
+      user.resume.extractedSkills = extractedSkills;
+    } catch (error) {
+      console.error('Error extracting skills from resume:', error);
+      // Continue without skills extraction if there's an error
+    }
+    
     console.log('Saving user with resume:', user.resume);
-    await user.save();
+    console.log('Skills to be saved:', user.skills);
+    
+    // Explicitly set skills in case the array is not being recognized
+    await User.findByIdAndUpdate(
+      user._id,
+      { 
+        resume: user.resume,
+        skills: user.skills
+      },
+      { new: true }
+    );
+    
     console.log('User saved successfully');
     
-    // Return response with filename and uploadDate
+    // Return response with filename, uploadDate, and extracted skills
     res.json({
       message: 'Resume uploaded successfully',
       resume: {
         filename: user.resume.filename,
-        uploadDate: user.resume.uploadDate
+        uploadDate: user.resume.uploadDate,
+        extractedSkills: extractedSkills || []
       }
     });
   } catch (err) {

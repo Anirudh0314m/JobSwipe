@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { motion, AnimatePresence } from 'framer-motion'; // You'll need to install framer-motion
+import { motion, AnimatePresence } from 'framer-motion';
 import SwipeCard from '../components/jobs/SwipeCard';
+import api from '../utils/api';
 
 const SwipePage = () => {
   const { user } = useContext(AuthContext);
@@ -9,6 +10,8 @@ const SwipePage = () => {
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [matches, setMatches] = useState([]);
+  const [userSkills, setUserSkills] = useState([]);
+  const [noSkillsMessage, setNoSkillsMessage] = useState('');
   
   // Track direction for animation
   const [direction, setDirection] = useState(null);
@@ -18,60 +21,89 @@ const SwipePage = () => {
   const [toastMessage, setToastMessage] = useState('');
   
   useEffect(() => {
-    // Sample data - would come from API in a real implementation
-    const sampleJobs = [
-      {
-        id: 1,
-        title: "Frontend Developer",
-        company: "Tech Innovations",
-        description: "Join our team to build amazing user interfaces with React and modern JavaScript.",
-        location: "San Francisco, CA",
-        salary: "120,000 - 150,000",
-        skills: ["React", "JavaScript", "CSS"]
-      },
-      {
-        id: 2,
-        title: "UX Designer",
-        company: "Creative Solutions",
-        description: "Design beautiful and intuitive user experiences for web and mobile apps.",
-        location: "New York, NY",
-        salary: "95,000 - 120,000",
-        skills: ["Figma", "UI Design", "User Research"]
-      },
-      {
-        id: 3,
-        title: "Full Stack Developer",
-        company: "StartupXYZ",
-        description: "Build and maintain our web applications from frontend to backend.",
-        location: "Remote",
-        salary: "110,000 - 140,000",
-        skills: ["React", "Node.js", "MongoDB"]
-      },
-      {
-        id: 4,
-        title: "Data Scientist",
-        company: "Analytics Co",
-        description: "Analyze complex data and build machine learning models to drive business decisions.",
-        location: "Boston, MA",
-        salary: "130,000 - 160,000",
-        skills: ["Python", "Machine Learning", "SQL"]
-      },
-      {
-        id: 5,
-        title: "DevOps Engineer",
-        company: "CloudTech",
-        description: "Build and maintain our cloud infrastructure and CI/CD pipelines.",
-        location: "Seattle, WA",
-        salary: "125,000 - 155,000",
-        skills: ["AWS", "Docker", "Kubernetes"]
+    const fetchRecommendedJobs = async () => {
+      setLoading(true);
+      try {
+        // Get AI-recommended jobs based on user's skills/resume
+        const response = await api.get('/api/jobs/recommended/skills');
+        
+        if (response.data.message) {
+          // Show message if no skills found
+          setNoSkillsMessage(response.data.message);
+        }
+        
+        // Set user skills from API response
+        if (response.data.userSkills) {
+          setUserSkills(response.data.userSkills);
+        }
+        
+        // Set jobs from API, sorted by match score
+        const recommendedJobs = response.data.data;
+        setJobs(recommendedJobs);
+        
+        // Show a welcome toast if we have skills and recommendations
+        if (response.data.userSkills && response.data.userSkills.length > 0) {
+          setToastMessage(`Found ${recommendedJobs.length} jobs matching your skills!`);
+          setShowToast(true);
+          setTimeout(() => setShowToast(false), 3000);
+        }
+      } catch (error) {
+        console.error('Error fetching recommended jobs:', error);
+        // Fall back to sample data if API call fails
+        const sampleJobs = [
+          {
+            id: 1,
+            title: "Frontend Developer",
+            company: "Tech Innovations",
+            description: "Join our team to build amazing user interfaces with React and modern JavaScript.",
+            location: "San Francisco, CA",
+            salary: "120,000 - 150,000",
+            skills: ["React", "JavaScript", "CSS"]
+          },
+          {
+            id: 2,
+            title: "UX Designer",
+            company: "Creative Solutions",
+            description: "Design beautiful and intuitive user experiences for web and mobile apps.",
+            location: "New York, NY",
+            salary: "95,000 - 120,000",
+            skills: ["Figma", "UI Design", "User Research"]
+          },
+          {
+            id: 3,
+            title: "Full Stack Developer",
+            company: "StartupXYZ",
+            description: "Build and maintain our web applications from frontend to backend.",
+            location: "Remote",
+            salary: "110,000 - 140,000",
+            skills: ["React", "Node.js", "MongoDB"]
+          },
+          {
+            id: 4,
+            title: "Data Scientist",
+            company: "Analytics Co",
+            description: "Analyze complex data and build machine learning models to drive business decisions.",
+            location: "Boston, MA",
+            salary: "130,000 - 160,000",
+            skills: ["Python", "Machine Learning", "SQL"]
+          },
+          {
+            id: 5,
+            title: "DevOps Engineer",
+            company: "CloudTech",
+            description: "Build and maintain our cloud infrastructure and CI/CD pipelines.",
+            location: "Seattle, WA",
+            salary: "125,000 - 155,000",
+            skills: ["AWS", "Docker", "Kubernetes"]
+          }
+        ];
+        setJobs(sampleJobs);
+      } finally {
+        setLoading(false);
       }
-    ];
+    };
     
-    // Simulate API delay
-    setTimeout(() => {
-      setJobs(sampleJobs);
-      setLoading(false);
-    }, 1000);
+    fetchRecommendedJobs();
   }, []);
   
   const handleSwipe = (swipeDirection) => {
@@ -100,10 +132,6 @@ const SwipePage = () => {
       setTimeout(() => {
         setShowToast(false);
       }, 3000);
-      
-      // Show toast notification
-      // If you have a toast library, you could use it here
-      // For now, we'll just update UI state
     }
     
     // Log the swipe action (would send to API in real app)
@@ -142,9 +170,33 @@ const SwipePage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 px-4 py-6">
       <div className="max-w-md mx-auto">
-        <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">
+        <h1 className="text-2xl font-bold text-center text-gray-800 mb-2">
           Find Your Next Job
         </h1>
+        
+        {userSkills && userSkills.length > 0 && (
+          <div className="mb-4">
+            <p className="text-sm text-center text-gray-600 mb-2">
+              Recommendations based on your skills:
+            </p>
+            <div className="flex flex-wrap justify-center gap-1">
+              {userSkills.map((skill, index) => (
+                <span 
+                  key={index} 
+                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                >
+                  {skill}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {noSkillsMessage && (
+          <div className="mb-4 px-4 py-2 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+            <p className="text-sm text-yellow-700">{noSkillsMessage}</p>
+          </div>
+        )}
         
         {loading ? (
           <div className="flex justify-center items-center h-[60vh]">
@@ -164,7 +216,9 @@ const SwipePage = () => {
                 {currentIndex < jobs.length && (
                   <SwipeCard 
                     job={jobs[currentIndex]} 
-                    onSwipe={handleSwipe} 
+                    onSwipe={handleSwipe}
+                    matchScore={jobs[currentIndex].matchScore}
+                    isRecommended={jobs[currentIndex].isRecommended}
                   />
                 )}
               </div>

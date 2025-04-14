@@ -2,6 +2,14 @@ import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import api from '../utils/api';
 
+// Add path import for handling file paths
+const path = {
+  basename: (filepath) => {
+    if (!filepath) return '';
+    return filepath.split('/').pop().split('\\').pop();
+  }
+};
+
 const ProfilePage = () => {
   const { user } = useContext(AuthContext);
   const [loading, setLoading] = useState(true);
@@ -138,16 +146,62 @@ const ProfilePage = () => {
       clearInterval(interval);
       setUploadProgress(100);
       
-      // Update resume state with returned data
+      console.log("Resume upload response:", res.data);
+      
+      // Update resume state with returned data from server
       setResume({
-        name: resume.name,
-        url: `/uploads/resumes/${path.basename(resume.name)}`,
+        name: res.data.resume.filename,
+        url: `/api/profile/resume/${path.basename(res.data.resume.filename)}`,
         uploadDate: res.data.resume.uploadDate
       });
       
+      // Extract skills update
+      if (res.data.resume.extractedSkills && res.data.resume.extractedSkills.length > 0) {
+        const extractedSkills = res.data.resume.extractedSkills;
+        console.log("Skills extracted from resume:", extractedSkills);
+        
+        // IMPORTANT: Fix for the error - Initialize skills properly
+        // Ensure formData.skills is an array before calling map
+        const currentSkills = Array.isArray(formData.skills) ? formData.skills : [];
+        const newSkillsSet = new Set(currentSkills.map(s => s ? s.toLowerCase() : '').filter(Boolean));
+        const updatedSkills = [...currentSkills];
+        
+        extractedSkills.forEach(skill => {
+          if (skill && !newSkillsSet.has(skill.toLowerCase())) {
+            updatedSkills.push(skill);
+          }
+        });
+        
+        console.log("Updated skills list:", updatedSkills);
+        
+        // Update the formData state with the new skills
+        setFormData(prevData => ({
+          ...prevData,
+          skills: updatedSkills
+        }));
+        
+        // Save the profile to persist these skills
+        try {
+          const profileUpdateResponse = await api.post('/api/profile', {
+            skills: updatedSkills
+          });
+          
+          if (profileUpdateResponse.data && profileUpdateResponse.data.skills) {
+            console.log("Skills saved to database:", profileUpdateResponse.data.skills);
+          }
+          
+          console.log("Profile updated with extracted skills");
+        } catch (err) {
+          console.error("Failed to save extracted skills to profile:", err);
+        }
+        
+        setSuccessMessage(`Resume uploaded successfully! ${extractedSkills.length} skills were extracted from your resume.`);
+      } else {
+        setSuccessMessage('Resume uploaded successfully!');
+      }
+      
       setUploading(false);
-      setSuccessMessage('Resume uploaded successfully!');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      setTimeout(() => setSuccessMessage(''), 5000);
     } catch (err) {
       console.error('Error uploading resume:', err.response?.data?.message || err.message);
       setUploading(false);
@@ -173,11 +227,23 @@ const ProfilePage = () => {
       
       const res = await api.post('/api/profile', profileData);
       
+      // Update formData with the returned profile data
+      // This ensures UI reflects what was actually saved in the database
+      if (res.data && res.data.skills) {
+        console.log("Server returned skills:", res.data.skills);
+        setFormData(prevData => ({
+          ...prevData,
+          skills: res.data.skills
+        }));
+      }
+      
       // Show success message
       setSuccessMessage('Profile updated successfully!');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err) {
       console.error('Error updating profile:', err);
+      setSuccessMessage('Error updating profile. Please try again.');
+      setTimeout(() => setSuccessMessage(''), 3000);
     } finally {
       setSaving(false);
     }
