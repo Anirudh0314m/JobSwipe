@@ -89,3 +89,61 @@ export const citiesByCountry = {
   "Brazil": ["São Paulo", "Rio de Janeiro", "Brasília", "Salvador", "Fortaleza", "Belo Horizonte", "Manaus", "Curitiba", "Recife", "Porto Alegre", "Belém", "Goiânia", "Guarulhos", "Campinas", "São Luís"],
   "Spain": ["Madrid", "Barcelona", "Valencia", "Seville", "Zaragoza", "Málaga", "Murcia", "Palma", "Las Palmas", "Bilbao", "Alicante", "Córdoba", "Valladolid", "Vigo", "Gijón"]
 };
+
+// Skills by job title mapping
+export const skillsByJobTitle = {
+  "Software Engineer": [
+    "JavaScript", "React", "Node.js", "Python", "Java", "C++", "C#", 
+    "AWS", "Docker", "Kubernetes", "Git", "SQL", "NoSQL", "REST API", 
+    "GraphQL", "TypeScript", "Agile", "CI/CD", "Test-Driven Development"
+  ],
+  "Frontend Developer": [
+    "HTML", "CSS", "JavaScript", "React", "Vue.js", "Angular", "TypeScript",
+    "Responsive Design", "SASS/SCSS", "Bootstrap", "Tailwind CSS", "Webpack",
+    "Jest", "UI/UX", "Web Performance", "Browser APIs", "GraphQL"
+  ],
+  "Backend Developer": [
+    "Node.js", "Python", "Java", "C#", "PHP", "Ruby", "Go",
+    "Express.js", "Django", "Spring Boot", "ASP.NET", "Laravel",
+    "SQL", "PostgreSQL", "MySQL", "MongoDB", "Redis", "API Design",
+    "Microservices", "Docker", "Kubernetes", "Authentication/Authorization"
+  ],
+  "Data Scientist": [
+    "Python", "R", "SQL", "Machine Learning", "Deep Learning", "TensorFlow",
+    "PyTorch", "Pandas", "NumPy", "SciPy", "Scikit-learn", "Data Visualization",
+    "Tableau", "Power BI", "Statistics", "A/B Testing", "Big Data", "NLP",
+    "Computer Vision", "Data Mining", "ETL", "Feature Engineering"
+  ],
+  "Product Manager": [
+    "Product Strategy", "Market Research", "User Research", "Roadmapping",
+    "Agile", "Scrum", "User Stories", "KPIs", "Analytics", "A/B Testing",
+    "Wireframing", "Prototyping", "Stakeholder Management", "Communication",
+    "Presentation Skills", "Prioritization", "Competitive Analysis", "JIRA"
+  ],
+  "UX Designer": [
+    "User Research", "Wireframing", "Prototyping", "User Testing",
+    "UI Design", "Figma", "Sketch", "Adobe XD", "Information Architecture",
+    "Usability Testing", "Interaction Design", "Accessibility", "Design Systems",
+    "User Flows", "Personas", "Journey Mapping", "Visual Design"
+  ],
+  "DevOps Engineer": [
+    "Linux", "Bash", "Python", "Docker", "Kubernetes", "Terraform",
+    "AWS", "Azure", "GCP", "CI/CD", "Jenkins", "GitHub Actions",
+    "Infrastructure as Code", "Monitoring", "Prometheus", "Grafana",
+    "Log Management", "Security", "Networking", "Troubleshooting"
+  ],
+  "Data Analyst": [
+    "SQL", "Python", "R", "Excel", "Data Visualization", "Tableau",
+    "Power BI", "Google Analytics", "Statistics", "A/B Testing",
+    "Data Cleaning", "ETL", "Reporting", "Dashboard Design",
+    "Data Modeling", "Business Intelligence"
+  ],
+  // Add more job titles and skills as needed
+};
+
+// Add a default set of common skills for job titles not in the mapping
+export const commonSkills = [
+  "Communication", "Problem Solving", "Teamwork", "Time Management",
+  "Leadership", "Critical Thinking", "Project Management", "Adaptability",
+  "Microsoft Office", "Analytical Skills", "Customer Service", "Organization"
+];

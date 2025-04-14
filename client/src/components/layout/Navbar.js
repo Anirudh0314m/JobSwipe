@@ -17,13 +17,27 @@ const Navbar = () => {
             {user ? (
               <>
                 {user.userType === 'Job Poster' ? (
-                  <Link to="/post-job" className="hover:text-blue-200">
-                    Post Job
-                  </Link>
+                  <>
+                    <Link to="/post-job" className="hover:text-blue-200">
+                      Post Job
+                    </Link>
+                    <Link to="/posted-jobs" className="hover:text-blue-200">
+                      Posted Jobs
+                    </Link>
+                  </>
                 ) : (
-                  <Link to="/swipe" className="hover:text-blue-200">
-                    Swipe Jobs
-                  </Link>
+                  <>
+                    <Link to="/swipe" className="hover:text-blue-200">
+                      Swipe Jobs
+                    </Link>
+                    {/* Profile link only for job seekers */}
+                    <Link 
+                      to="/profile" 
+                      className="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+                    >
+                      Profile
+                    </Link>
+                  </>
                 )}
                 
                 {user && user.userType === 'Job Seeker' && (
@@ -32,15 +46,6 @@ const Navbar = () => {
                     className="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
                   >
                     Matches
-                  </Link>
-                )}
-                
-                {user && (
-                  <Link 
-                    to="/profile" 
-                    className="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
-                  >
-                    Profile
                   </Link>
                 )}
                 

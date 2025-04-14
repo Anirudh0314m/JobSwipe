@@ -6,7 +6,7 @@ import Autocomplete from '../components/common/Autocomplete';
 import PhoneInput from '../components/common/PhoneInput';
 import { companyNames, jobTitles } from '../utils/companyData';
 import SuccessAnimation from '../components/common/SuccessAnimation';
-import { top500Companies, commonJobTitles, countries, usStates, citiesByCountry } from '../utils/companyData';
+import { top500Companies, commonJobTitles, countries, usStates, citiesByCountry, skillsByJobTitle } from '../utils/companyData';
 
 // Combine countries and US states with "Remote" option for location suggestions
 const locationSuggestions = ['Remote', 'Remote - US Only', ...countries, ...usStates.map(state => `${state}, USA`)];
@@ -82,6 +82,10 @@ const PostJobPage = () => {
     'Overnight shift', 'Rotating shift', 'Flexible hours'
   ];
   
+  // Add state for filtered skills
+  const [filteredSkills, setFilteredSkills] = useState([]);
+  const [skillDropdownOpen, setSkillDropdownOpen] = useState(false);
+  
   useEffect(() => {
     // Prefill company name if user is logged in
     if (user?.company) {
@@ -108,6 +112,19 @@ const PostJobPage = () => {
       setFormData(prev => ({ ...prev, location: formData.country }));
     }
   }, [formData.isRemote, formData.country, formData.city]);
+  
+  // Update filtered skills when job title changes
+  useEffect(() => {
+    if (formData.title && skillsByJobTitle[formData.title]) {
+      setFilteredSkills(skillsByJobTitle[formData.title]);
+    } else {
+      // Fallback to common skills if no matching job title or no skills for that title
+      setFilteredSkills([
+        'JavaScript', 'React', 'Node.js', 'HTML', 'CSS', 'Python', 'Java', 'SQL',
+        'Communication', 'Problem Solving', 'Teamwork', 'Leadership', 'Time Management'
+      ]);
+    }
+  }, [formData.title]);
   
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -198,6 +215,16 @@ const PostJobPage = () => {
     setFormData({ ...formData, screeningQuestions: updatedQuestions });
   };
   
+  const handleSkillSelect = (selectedSkill) => {
+    if (!formData.skills.includes(selectedSkill)) {
+      setFormData({
+        ...formData,
+        skills: [...formData.skills, selectedSkill]
+      });
+    }
+    setSkillDropdownOpen(false);
+  };
+  
   const nextStep = () => {
     setCurrentStep(prev => Math.min(prev + 1, totalSteps));
   };
@@ -235,24 +262,27 @@ const PostJobPage = () => {
       };
       
       // Submit to API
-      const response = await api.post('/api/jobs', submitData);
+      const response = await axios.post('/api/jobs', submitData);
       
       console.log('Job posting created:', response.data);
       
       setSuccess(true);
+      setLoading(false); // Stop loading after success
       
-      // Navigate to matches page after a delay
-      setTimeout(() => {
-        navigate('/matches');
-      }, 3000);
+      // No automatic navigation - user will need to click a button
     } catch (err) {
       console.error('Error posting job:', err);
       setError(err.response?.data?.message || 'Failed to post job. Please try again.');
-    } finally {
       setLoading(false);
     }
   };
   
+  // Add navigation handlers
+
+  const handleBackToDashboard = () => {
+    navigate('/dashboard');
+  };
+
   // Progress indicator circle class based on step
   const getCircleClass = (stepNumber) => {
     if (stepNumber < currentStep) {
@@ -688,17 +718,18 @@ const PostJobPage = () => {
               />
             </div>
             
-            {/* Skills */}
+            {/* Skills - Modified to include dropdown */}
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Required Skills <span className="text-red-500">*</span>
               </label>
-              <div className="flex mt-1">
+              <div className="flex mt-1 relative">
                 <input
                   type="text"
                   className="block w-full border border-gray-300 rounded-l-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   value={skill}
                   onChange={(e) => setSkill(e.target.value)}
+                  onClick={() => setSkillDropdownOpen(true)}
                   placeholder="e.g., JavaScript, React, SQL"
                 />
                 <button
@@ -708,6 +739,26 @@ const PostJobPage = () => {
                 >
                   Add
                 </button>
+                
+                {/* Skills dropdown */}
+                {skillDropdownOpen && filteredSkills.length > 0 && (
+                  <div className="absolute z-10 mt-12 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base overflow-auto focus:outline-none sm:text-sm">
+                    <div className="overflow-y-auto max-h-48">
+                      {filteredSkills.filter(s => 
+                        s.toLowerCase().includes(skill.toLowerCase()) && 
+                        !formData.skills.includes(s)
+                      ).map((skillOption) => (
+                        <div
+                          key={skillOption}
+                          className="cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-blue-50"
+                          onClick={() => handleSkillSelect(skillOption)}
+                        >
+                          {skillOption}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               
               {formData.skills.length > 0 && (
@@ -1050,6 +1101,11 @@ const PostJobPage = () => {
     }
   };
   
+  // Add a new function to handle navigation after successful posting
+  const handleViewPostedJobs = () => {
+    navigate('/posted-jobs');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 px-4 py-10">
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-md overflow-hidden">
@@ -1068,7 +1124,22 @@ const PostJobPage = () => {
                   </svg>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium text-green-800">Job posted successfully! Redirecting to matches page...</p>
+                  <p className="text-sm font-medium text-green-800">Job posted successfully!</p>
+                  {/* Add buttons for next actions */}
+                  <div className="mt-3 flex space-x-3">
+                    <button
+                      onClick={handleViewPostedJobs}
+                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                    >
+                      View Posted Jobs
+                    </button>
+                    <button
+                      onClick={handleBackToDashboard}
+                      className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      Back to Dashboard
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
