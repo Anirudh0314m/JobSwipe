@@ -7,6 +7,7 @@ import PhoneInput from '../components/common/PhoneInput';
 import { companyNames, jobTitles } from '../utils/companyData';
 import SuccessAnimation from '../components/common/SuccessAnimation';
 import { top500Companies, commonJobTitles, countries, usStates, citiesByCountry, skillsByJobTitle } from '../utils/companyData';
+import { getCompanyLogo } from '../utils/companyLogos';
 
 // Combine countries and US states with "Remote" option for location suggestions
 const locationSuggestions = ['Remote', 'Remote - US Only', ...countries, ...usStates.map(state => `${state}, USA`)];
@@ -94,6 +95,9 @@ const PostJobPage = () => {
   const [filteredSkills, setFilteredSkills] = useState([]);
   const [skillDropdownOpen, setSkillDropdownOpen] = useState(false);
   
+  // Company logo state
+  const [companyLogo, setCompanyLogo] = useState(null);
+  
   useEffect(() => {
     // Prefill company name if user is logged in
     if (user?.company) {
@@ -133,6 +137,16 @@ const PostJobPage = () => {
       ]);
     }
   }, [formData.title]);
+  
+  // Check for company logo when company name changes
+  useEffect(() => {
+    if (formData.company) {
+      const logo = getCompanyLogo(formData.company);
+      setCompanyLogo(logo);
+    } else {
+      setCompanyLogo(null);
+    }
+  }, [formData.company]);
   
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -488,22 +502,44 @@ const PostJobPage = () => {
                 Company Name <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <Autocomplete
-                  suggestions={top500Companies}
-                  placeholder="e.g., Amazon, Google, Your Company"
-                  value={formData.company}
-                  onChange={(value) => setFormData({...formData, company: value})}
-                  required={true}
-                />
-                <button 
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
-                  onClick={() => toggleDropdown('company')}
-                >
-                  <svg className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
-                  </svg>
-                </button>
+                <div className="relative flex items-center">
+                  {/* Show inline logo in the input if available */}
+                  {companyLogo && (
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                      <img 
+                        src={companyLogo} 
+                        alt={`${formData.company} logo`}
+                        className="h-5 w-5 object-contain" 
+                      />
+                    </div>
+                  )}
+                  <input
+                    type="text"
+                    id="company"
+                    name="company"
+                    className={`block w-full border border-gray-300 rounded-md shadow-sm py-2 ${companyLogo ? 'pl-10' : 'pl-3'} pr-10 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
+                    placeholder="e.g., Amazon, Google, Your Company"
+                    value={formData.company}
+                    onChange={(e) => setFormData({...formData, company: e.target.value})}
+                    onClick={() => toggleDropdown('company')}
+                  />
+                  <button 
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
+                    onClick={() => toggleDropdown('company')}
+                  >
+                    <svg className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+                {dropdownsOpen.company && (
+                  <div className="absolute z-20 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base overflow-auto focus:outline-none sm:text-sm">
+                    <div className="overflow-y-auto max-h-48">
+                      {top500Companies.map(company => renderCompanyDropdownItem(company))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             
@@ -1184,6 +1220,36 @@ const PostJobPage = () => {
   // Add a new function to handle navigation after successful posting
   const handleViewPostedJobs = () => {
     navigate('/posted-jobs');
+  };
+
+  // Add this function to render company dropdown items with logos
+  const renderCompanyDropdownItem = (company) => {
+    const logo = getCompanyLogo(company);
+    
+    return (
+      <div
+        key={company}
+        className="cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-blue-50 flex items-center"
+        onClick={() => {
+          setFormData({...formData, company});
+          toggleDropdown('company');
+          // If the company has a logo, we'll set it directly here
+          const logoUrl = getCompanyLogo(company);
+          if (logoUrl) {
+            setCompanyLogo(logoUrl);
+          }
+        }}
+      >
+        {logo && (
+          <img 
+            src={logo} 
+            alt={`${company} logo`}
+            className="h-5 w-5 mr-3 object-contain"
+          />
+        )}
+        <span>{company}</span>
+      </div>
+    );
   };
 
   return (

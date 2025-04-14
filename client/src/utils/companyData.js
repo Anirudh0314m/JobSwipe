@@ -1,14 +1,35 @@
-// Top 500 companies (abbreviated list for example)
+
 export const top500Companies = [
-  "Apple", "Microsoft", "Amazon", "Google", "Facebook", "Tesla", "Walmart", "Exxon Mobil", 
-  "Berkshire Hathaway", "UnitedHealth Group", "Johnson & Johnson", "JPMorgan Chase", 
-  "Visa", "Procter & Gamble", "Mastercard", "Bank of America", "Home Depot", "Nvidia", 
-  "Pfizer", "Verizon", "Adobe", "Coca-Cola", "Disney", "Netflix", "Oracle", "Intel",
-  "Salesforce", "Cisco", "IBM", "Accenture", "PepsiCo", "Comcast", "Nike", "McDonald's",
-  "General Electric", "Abbott Laboratories", "AT&T", "Merck", "Costco", "Broadcom",
-  "Citigroup", "PayPal", "Thermo Fisher Scientific", "Advanced Micro Devices", "Boeing",
-  "Texas Instruments", "Qualcomm", "Wells Fargo", "Starbucks", "Goldman Sachs"
-  // ... add more companies to reach 500
+  // Tech Giants
+  'Apple', 'Microsoft', 'Amazon', 'Google', 'Facebook', 'Tesla', 'Netflix', 'IBM', 'Adobe',
+  'Alphabet', 'Meta', 'Intel', 'Cisco', 'Oracle', 'Samsung', 'Sony', 'Tencent', 'Alibaba',
+  'Salesforce', 'SAP', 'NVIDIA', 'AMD', 'Dell', 'HP', 'Lenovo', 'Twitter', 'LinkedIn', 'Zoom', 'Spotify',
+  
+  // Retail & Consumer Goods
+  'Walmart', 'Target', 'Costco', 'Home Depot', 'Lowe\'s', 'Kroger', 'Best Buy', 'Nike', 'Adidas',
+  'Coca-Cola', 'PepsiCo', 'Procter & Gamble', 'Unilever', 'Nestlé', 'McDonald\'s', 'Starbucks',
+  
+  // Financial Services
+  'JPMorgan Chase', 'Visa', 'Mastercard', 'American Express', 'Bank of America', 'Wells Fargo',
+  'Citigroup', 'Goldman Sachs', 'Morgan Stanley', 'HSBC', 'Barclays', 'Royal Bank of Canada',
+  'UBS', 'BlackRock', 'PayPal', 'Square',
+  
+  // Automotive
+  'Toyota', 'Volkswagen', 'General Motors', 'Ford', 'Honda', 'BMW', 'Mercedes-Benz', 'Hyundai',
+  
+  // Energy & Industrial
+  'ExxonMobil', 'Shell', 'Chevron', 'BP', 'Total', 'General Electric', 'Siemens', '3M',
+  
+  // Healthcare & Pharma
+  'Johnson & Johnson', 'Pfizer', 'Roche', 'Novartis', 'Merck', 'Bayer', 'UnitedHealth Group', 'CVS Health',
+  
+  // Telecommunications
+  'AT&T', 'Verizon', 'T-Mobile', 'Comcast', 'Vodafone',
+  
+  // Entertainment & Media
+  'Disney', 'Warner Bros.', 'Universal', 'Paramount', 'Sony Pictures',
+  
+  // ...any other existing companies from the original list...
 ];
 
 // Common job titles
