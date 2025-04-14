@@ -1,10 +1,15 @@
-import React, { useState, useContext, useEffect } from 'react';
-import { AuthContext } from '../context/AuthContext';
-import api from '../utils/api';
+import React, { useState, useEffect, useRef, useContext } from 'react';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 import Autocomplete from '../components/common/Autocomplete';
 import PhoneInput from '../components/common/PhoneInput';
-import { top500Companies, commonJobTitles, countries, usStates } from '../utils/companyData';
+import { companyNames, jobTitles } from '../utils/companyData';
+import SuccessAnimation from '../components/common/SuccessAnimation';
+import { top500Companies, commonJobTitles, countries, usStates, citiesByCountry } from '../utils/companyData';
+
+// Combine countries and US states with "Remote" option for location suggestions
+const locationSuggestions = ['Remote', 'Remote - US Only', ...countries, ...usStates.map(state => `${state}, USA`)];
 
 const PostJobPage = () => {
   const { user } = useContext(AuthContext);
@@ -20,6 +25,9 @@ const PostJobPage = () => {
     description: '',
     requirements: '',
     location: '',
+    isRemote: true,
+    country: '',
+    city: '',
     salary: '',
     salaryMin: '',
     salaryMax: '',
@@ -32,7 +40,19 @@ const PostJobPage = () => {
     applicationInstructions: '',
     applicationDeadline: '',
     skills: [],
-    screeningQuestions: []
+    screeningQuestions: [],
+    phoneNumber: '' // Added phone number field
+  });
+  
+  // State for available cities based on selected country
+  const [availableCities, setAvailableCities] = useState([]);
+  
+  // Track if dropdowns are open
+  const [dropdownsOpen, setDropdownsOpen] = useState({
+    country: false,
+    city: false,
+    title: false,  // Added for job title dropdown
+    company: false // Added for company dropdown
   });
   
   const [skill, setSkill] = useState('');
@@ -69,8 +89,55 @@ const PostJobPage = () => {
     }
   }, [user]);
   
+  // Update available cities when country changes
+  useEffect(() => {
+    if (formData.country && citiesByCountry[formData.country]) {
+      setAvailableCities(citiesByCountry[formData.country]);
+    } else {
+      setAvailableCities([]);
+    }
+  }, [formData.country]);
+  
+  // Update location field when isRemote, country or city changes
+  useEffect(() => {
+    if (formData.isRemote) {
+      setFormData(prev => ({ ...prev, location: 'Remote' }));
+    } else if (formData.country && formData.city) {
+      setFormData(prev => ({ ...prev, location: `${formData.city}, ${formData.country}` })); 
+    } else if (formData.country) {
+      setFormData(prev => ({ ...prev, location: formData.country }));
+    }
+  }, [formData.isRemote, formData.country, formData.city]);
+  
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+  
+  const toggleDropdown = (dropdown) => {
+    setDropdownsOpen(prev => ({
+      ...prev,
+      [dropdown]: !prev[dropdown]
+    }));
+  };
+  
+  const handleCountrySelect = (country) => {
+    setFormData(prev => ({ ...prev, country, city: '' }));
+    setDropdownsOpen(prev => ({ ...prev, country: false }));
+  };
+  
+  const handleCitySelect = (city) => {
+    setFormData(prev => ({ ...prev, city }));
+    setDropdownsOpen(prev => ({ ...prev, city: false }));
+  };
+  
+  const handleLocationTypeChange = (isRemote) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      isRemote,
+      country: isRemote ? '' : prev.country,
+      city: isRemote ? '' : prev.city,
+      location: isRemote ? 'Remote' : (prev.country && prev.city ? `${prev.city}, ${prev.country}` : '')
+    }));
   };
   
   const handleCheckboxChange = (field, value) => {
@@ -186,6 +253,73 @@ const PostJobPage = () => {
     }
   };
   
+  // Progress indicator circle class based on step
+  const getCircleClass = (stepNumber) => {
+    if (stepNumber < currentStep) {
+      return "flex items-center justify-center w-8 h-8 bg-blue-500 rounded-full text-white";
+    } else if (stepNumber === currentStep) {
+      return "flex items-center justify-center w-8 h-8 bg-blue-100 border-2 border-blue-500 rounded-full text-blue-500";
+    } else {
+      return "flex items-center justify-center w-8 h-8 bg-gray-200 rounded-full text-gray-600";
+    }
+  };
+
+  // Render the form header with progress indicator
+  const renderProgressBar = () => {
+    return (
+      <div className="mb-8">
+        <div className="flex items-center justify-between relative">
+          {/* Progress line behind the circles */}
+          <div className="absolute top-1/2 transform -translate-y-1/2 h-1 bg-gray-200 w-full"></div>
+          {/* Enhanced blue progress line that fills based on current step */}
+          <div 
+            className="absolute top-1/2 transform -translate-y-1/2 h-2 bg-blue-500 transition-all duration-300"
+            style={{ width: `${((currentStep - 1) / (totalSteps - 1)) * 100}%` }}
+          ></div>
+          
+          {/* Step circles */}
+          <div className="relative z-10">
+            <div className={getCircleClass(1)}>
+              {currentStep > 1 ? (
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"></path>
+                </svg>
+              ) : "1"}
+            </div>
+            <div className="mt-2 text-xs text-center font-medium">Basic Info</div>
+          </div>
+          
+          <div className="relative z-10">
+            <div className={getCircleClass(2)}>
+              {currentStep > 2 ? (
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"></path>
+                </svg>
+              ) : "2"}
+            </div>
+            <div className="mt-2 text-xs text-center font-medium">Description</div>
+          </div>
+          
+          <div className="relative z-10">
+            <div className={getCircleClass(3)}>
+              {currentStep > 3 ? (
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"></path>
+                </svg>
+              ) : "3"}
+            </div>
+            <div className="mt-2 text-xs text-center font-medium">Benefits</div>
+          </div>
+          
+          <div className="relative z-10">
+            <div className={getCircleClass(4)}>4</div>
+            <div className="mt-2 text-xs text-center font-medium">Review</div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Render the current step
   const renderStep = () => {
     switch (currentStep) {
@@ -199,16 +333,43 @@ const PostJobPage = () => {
               <label htmlFor="title" className="block text-sm font-medium text-gray-700">
                 Job Title <span className="text-red-500">*</span>
               </label>
-              <input
-                id="title"
-                name="title"
-                type="text"
-                required
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                value={formData.title}
-                onChange={handleChange}
-                placeholder="e.g., Software Engineer, Data Analyst"
-              />
+              <div className="relative">
+                <Autocomplete
+                  suggestions={commonJobTitles}
+                  placeholder="e.g., Software Engineer, Data Analyst"
+                  value={formData.title}
+                  onChange={(value) => setFormData({...formData, title: value})}
+                  required={true}
+                />
+                <button 
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer z-10"
+                  onClick={() => toggleDropdown('title')}
+                  aria-label="Toggle job title dropdown"
+                >
+                  <svg className="h-5 w-5 text-gray-400 hover:text-gray-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                {dropdownsOpen.title && (
+                  <div className="absolute z-20 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base overflow-auto focus:outline-none sm:text-sm">
+                    <div className="overflow-y-auto max-h-48">
+                      {commonJobTitles.map((title) => (
+                        <div
+                          key={title}
+                          className="cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-blue-50"
+                          onClick={() => {
+                            setFormData({...formData, title});
+                            toggleDropdown('title');
+                          }}
+                        >
+                          {title}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
             
             {/* Company */}
@@ -216,33 +377,166 @@ const PostJobPage = () => {
               <label htmlFor="company" className="block text-sm font-medium text-gray-700">
                 Company Name <span className="text-red-500">*</span>
               </label>
-              <input
-                id="company"
-                name="company"
-                type="text"
-                required
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                value={formData.company}
-                onChange={handleChange}
-                placeholder="e.g., Amazon, Google, Your Company"
-              />
+              <div className="relative">
+                <Autocomplete
+                  suggestions={top500Companies}
+                  placeholder="e.g., Amazon, Google, Your Company"
+                  value={formData.company}
+                  onChange={(value) => setFormData({...formData, company: value})}
+                  required={true}
+                />
+                <button 
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
+                  onClick={() => toggleDropdown('company')}
+                >
+                  <svg className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
             </div>
             
             {/* Location */}
             <div>
-              <label htmlFor="location" className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700">
                 Location <span className="text-red-500">*</span>
               </label>
-              <input
-                id="location"
-                name="location"
-                type="text"
-                required
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                value={formData.location}
-                onChange={handleChange}
-                placeholder="e.g., San Francisco, CA or Remote"
-              />
+              
+              {/* Remote/Non-Remote Radio Buttons */}
+              <div className="mt-2 mb-4 flex items-center space-x-6">
+                <div className="flex items-center">
+                  <input
+                    id="remote"
+                    name="locationType"
+                    type="radio"
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                    checked={formData.isRemote}
+                    onChange={() => handleLocationTypeChange(true)}
+                  />
+                  <label htmlFor="remote" className="ml-2 block text-sm text-gray-700">
+                    Remote
+                  </label>
+                </div>
+                <div className="flex items-center">
+                  <input
+                    id="non-remote"
+                    name="locationType"
+                    type="radio"
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                    checked={!formData.isRemote}
+                    onChange={() => handleLocationTypeChange(false)}
+                  />
+                  <label htmlFor="non-remote" className="ml-2 block text-sm text-gray-700">
+                    On-site / Hybrid
+                  </label>
+                </div>
+              </div>
+              
+              {!formData.isRemote && (
+                <div className="space-y-3">
+                  {/* Country Selector with Dropdown Arrow */}
+                  <div className="relative">
+                    <label htmlFor="country" className="block text-sm text-gray-600">
+                      Country <span className="text-red-500">*</span>
+                    </label>
+                    <div className="mt-1 relative rounded-md shadow-sm">
+                      <input
+                        type="text"
+                        id="country"
+                        className="block w-full pr-10 border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        placeholder="Select a country"
+                        value={formData.country}
+                        onChange={(e) => setFormData({...formData, country: e.target.value})}
+                        onClick={() => toggleDropdown('country')}
+                        readOnly
+                      />
+                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                        <svg className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <button
+                        type="button"
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                        onClick={() => toggleDropdown('country')}
+                      >
+                        <span className="sr-only">Toggle dropdown</span>
+                      </button>
+                    </div>
+                    
+                    {dropdownsOpen.country && (
+                      <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base overflow-auto focus:outline-none sm:text-sm">
+                        <div className="overflow-y-auto max-h-48">
+                          {countries.map((country) => (
+                            <div
+                              key={country}
+                              className="cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-blue-50"
+                              onClick={() => handleCountrySelect(country)}
+                            >
+                              {country}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* City Selector with Dropdown Arrow */}
+                  {formData.country && (
+                    <div className="relative">
+                      <label htmlFor="city" className="block text-sm text-gray-600">
+                        City <span className="text-red-500">*</span>
+                      </label>
+                      <div className="mt-1 relative rounded-md shadow-sm">
+                        <input
+                          type="text"
+                          id="city"
+                          className="block w-full pr-10 border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                          placeholder="Select a city"
+                          value={formData.city}
+                          onChange={(e) => setFormData({...formData, city: e.target.value})}
+                          onClick={() => toggleDropdown('city')}
+                          readOnly
+                        />
+                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                          <svg className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <button
+                          type="button"
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                          onClick={() => toggleDropdown('city')}
+                        >
+                          <span className="sr-only">Toggle dropdown</span>
+                        </button>
+                      </div>
+                      
+                      {dropdownsOpen.city && (
+                        <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base overflow-auto focus:outline-none sm:text-sm">
+                          <div className="overflow-y-auto max-h-48">
+                            {availableCities.map((city) => (
+                              <div
+                                key={city}
+                                className="cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-blue-50"
+                                onClick={() => handleCitySelect(city)}
+                              >
+                                {city}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Display the selected location */}
+              <div className="mt-2 text-sm font-medium text-blue-600">
+                Selected location: {formData.location}
+              </div>
             </div>
             
             {/* Employment Type */}
@@ -331,6 +625,21 @@ const PostJobPage = () => {
                   placeholder="e.g., $50K - $80K per year"
                 />
               </div>
+            </div>
+            
+            {/* Phone Number */}
+            <div>
+              <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">
+                Contact Phone Number (Optional)
+              </label>
+              <PhoneInput
+                id="phoneNumber"
+                name="phoneNumber"
+                value={formData.phoneNumber}
+                onChange={(value) => setFormData({...formData, phoneNumber: value})}
+                className="mt-1"
+                placeholder="Enter a contact phone number"
+              />
             </div>
           </div>
         );
@@ -748,37 +1057,7 @@ const PostJobPage = () => {
           <h1 className="text-2xl font-bold text-gray-800 mb-8">Post a New Job</h1>
           
           {/* Progress indicator */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between">
-              {Array.from({ length: totalSteps }).map((_, index) => (
-                <div key={index} className="flex items-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                    currentStep > index + 1 ? 'bg-blue-600' : 
-                    currentStep === index + 1 ? 'bg-blue-500 ring-4 ring-blue-100' : 'bg-gray-200'
-                  }`}>
-                    {currentStep > index + 1 ? (
-                      <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    ) : (
-                      <span className={`text-sm font-medium ${currentStep === index + 1 ? 'text-white' : 'text-gray-500'}`}>
-                        {index + 1}
-                      </span>
-                    )}
-                  </div>
-                  {index < totalSteps - 1 && (
-                    <div className={`w-full h-1 ${currentStep > index + 1 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="flex justify-between mt-2">
-              <span className="text-xs font-medium">Basic Info</span>
-              <span className="text-xs font-medium">Description</span>
-              <span className="text-xs font-medium">Details</span>
-              <span className="text-xs font-medium">Review</span>
-            </div>
-          </div>
+          {renderProgressBar()}
           
           {success && (
             <div className="mb-6 bg-green-50 border-l-4 border-green-500 p-4 rounded">
