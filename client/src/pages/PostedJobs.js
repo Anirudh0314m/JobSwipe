@@ -26,42 +26,36 @@ const PostedJobs = () => {
           }
         };
         
-        // Get jobs from the API
-        const response = await axios.get('/api/jobs', config);
+        // Use the new dedicated API endpoint for user jobs
+        const response = await axios.get('/api/jobs/user/me', config);
         
-        // Extract jobs from the correct location in the response
-        // The API response structure is: {success: true, count: 8, data: Array(8)}
+        // Extract jobs from the response
         const jobsArray = response.data.data || [];
         
-        console.log('Current User:', user);
-        console.log('Jobs from API:', jobsArray);
+        console.log('Jobs posted by current user:', jobsArray);
         
-        // Since we don't have user IDs in the jobs, match by company name
-        // If we don't have a company name for the user, show all jobs for now
-        let userJobs = [];
-        
-        if (user?.company) {
-          userJobs = jobsArray.filter(job => job.company === user.company);
-          console.log(`Filtering jobs for company: ${user.company}`);
-        } else {
-          // For testing/development, show all jobs
-          console.log('No company associated with user - showing all jobs');
-          userJobs = jobsArray;
-        }
-        
-        console.log('Jobs to display:', userJobs);
-        
-        setJobs(userJobs);
+        setJobs(jobsArray);
         setLoading(false);
       } catch (err) {
         console.error('Error fetching jobs:', err);
-        setError('Unable to load your posted jobs. Please try again later.');
+        
+        // Check if error is due to authorization (user is not a job poster)
+        if (err.response && err.response.status === 401) {
+          setError('You are not authorized to view job postings. Only employers can post and view jobs.');
+        } else {
+          setError('Unable to load your posted jobs. Please try again later.');
+        }
+        
         setLoading(false);
       }
     };
 
     if (user) {
       fetchPostedJobs();
+    } else {
+      // Clear jobs if no user is logged in
+      setJobs([]);
+      setLoading(false);
     }
   }, [user]);
 

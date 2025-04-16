@@ -305,3 +305,30 @@ exports.recordJobMatch = async (req, res) => {
     });
   }
 };
+
+// @desc    Get jobs posted by the current user
+// @route   GET /api/jobs/user/me
+// @access  Private (Job Poster only)
+exports.getUserJobs = async (req, res) => {
+  try {
+    // Find jobs where the poster matches the current user ID
+    const userJobs = await Job.find({ poster: req.user.id })
+      .sort({ createdAt: -1 }) // Sort by most recent first
+      .populate({
+        path: 'poster',
+        select: 'email'
+      });
+    
+    res.status(200).json({
+      success: true,
+      count: userJobs.length,
+      data: userJobs
+    });
+  } catch (err) {
+    console.error('Error fetching user jobs:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Server Error'
+    });
+  }
+};
