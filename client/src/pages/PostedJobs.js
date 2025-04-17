@@ -4,38 +4,112 @@ import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
 const PostedJobs = () => {
-  const { user } = useContext(AuthContext);
+  // Get user and loading state from AuthContext
+  const { user, loading: authLoading } = useContext(AuthContext);
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Helper function to get token from storage based on user ID
+  const getAuthToken = (userId) => {
+    // Try session storage first
+    let token = sessionStorage.getItem(`jobswipe_token_${userId}`);
+    
+    // If not in session storage, try local storage
+    if (!token) {
+      token = localStorage.getItem(`jobswipe_token_${userId}`);
+    }
+    
+    return token;
+  };
+
+  // Get current user ID from storage
+  const getCurrentUserId = () => {
+    return sessionStorage.getItem('jobswipe_current_user_id') || 
+           localStorage.getItem('jobswipe_current_user_id');
+  };
 
   useEffect(() => {
     const fetchPostedJobs = async () => {
       try {
         setLoading(true);
         
-        // Get the auth token from localStorage
-        const token = localStorage.getItem('token');
+        // Wait for auth context to finish loading
+        if (authLoading) {
+          return; // Will try again when authLoading changes
+        }
         
-        // Ensure we have proper headers for the request
-        const config = {
-          headers: {
-            'Content-Type': 'application/json',
-            'x-auth-token': token
+        // Check for user in AuthContext
+        if (!user || !user._id) {
+          // Try to get user ID from storage directly
+          const userId = getCurrentUserId();
+          
+          if (!userId) {
+            console.error('No user found or user ID missing');
+            setError('Authentication error. Please log in again.');
+            setLoading(false);
+            return;
           }
-        };
-        
-        // Use the new dedicated API endpoint for user jobs
-        const response = await axios.get('/api/jobs/user/me', config);
-        
-        // Extract jobs from the response
-        const jobsArray = response.data.data || [];
-        
-        console.log('Jobs posted by current user:', jobsArray);
-        
-        setJobs(jobsArray);
-        setLoading(false);
+          
+          // Get the auth token using user ID from storage
+          const token = getAuthToken(userId);
+          
+          if (!token) {
+            console.error('No authentication token found');
+            setError('Authentication token not found. Please log in again.');
+            setLoading(false);
+            return;
+          }
+          
+          // Ensure we have proper headers for the request
+          const config = {
+            headers: {
+              'Content-Type': 'application/json',
+              'x-auth-token': token
+            }
+          };
+          
+          // Use the dedicated API endpoint for user jobs
+          const response = await axios.get('/api/jobs/user/me', config);
+          
+          // Extract jobs from the response
+          const jobsArray = response.data.data || [];
+          
+          console.log('Jobs posted by current user:', jobsArray);
+          
+          setJobs(jobsArray);
+          setLoading(false);
+        } else {
+          // Normal flow when user is available in AuthContext
+          const token = getAuthToken(user._id);
+          
+          if (!token) {
+            console.error('No authentication token found');
+            setError('Authentication token not found. Please log in again.');
+            setLoading(false);
+            return;
+          }
+          
+          // Ensure we have proper headers for the request
+          const config = {
+            headers: {
+              'Content-Type': 'application/json',
+              'x-auth-token': token
+            }
+          };
+          
+          // Use the dedicated API endpoint for user jobs
+          const response = await axios.get('/api/jobs/user/me', config);
+          
+          // Extract jobs from the response
+          const jobsArray = response.data.data || [];
+          
+          console.log('Jobs posted by current user:', jobsArray);
+          
+          setJobs(jobsArray);
+          setLoading(false);
+        }
       } catch (err) {
         console.error('Error fetching jobs:', err);
         
@@ -50,14 +124,8 @@ const PostedJobs = () => {
       }
     };
 
-    if (user) {
-      fetchPostedJobs();
-    } else {
-      // Clear jobs if no user is logged in
-      setJobs([]);
-      setLoading(false);
-    }
-  }, [user]);
+    fetchPostedJobs();
+  }, [user, authLoading]);
 
   // Add delete job functionality
   const handleDeleteJob = async (jobId) => {
@@ -68,22 +136,63 @@ const PostedJobs = () => {
     try {
       setDeleteLoading(true);
       
-      // Get the auth token from localStorage
-      const token = localStorage.getItem('token');
-      
-      // Configure headers for the request
-      const config = {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-auth-token': token
+      // Check for user in AuthContext
+      if (!user || !user._id) {
+        // Try to get user ID from storage directly
+        const userId = getCurrentUserId();
+          
+        if (!userId) {
+          alert('Authentication error. Please log in again.');
+          setDeleteLoading(false);
+          return;
         }
-      };
-      
-      // Delete the job
-      await axios.delete(`/api/jobs/${jobId}`, config);
-      
-      // Update the jobs list by removing the deleted job
-      setJobs(jobs.filter(job => job._id !== jobId));
+          
+        // Get the auth token using user ID from storage
+        const token = getAuthToken(userId);
+          
+        if (!token) {
+          alert('Authentication token not found. Please log in again.');
+          setDeleteLoading(false);
+          return;
+        }
+        
+        // Configure headers for the request
+        const config = {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-auth-token': token
+          }
+        };
+        
+        // Delete the job
+        await axios.delete(`/api/jobs/${jobId}`, config);
+        
+        // Update the jobs list by removing the deleted job
+        setJobs(jobs.filter(job => job._id !== jobId));
+      } else {
+        // Normal flow when user is available in AuthContext
+        const token = getAuthToken(user._id);
+        
+        if (!token) {
+          alert('Authentication token not found. Please log in again.');
+          setDeleteLoading(false);
+          return;
+        }
+        
+        // Configure headers for the request
+        const config = {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-auth-token': token
+          }
+        };
+        
+        // Delete the job
+        await axios.delete(`/api/jobs/${jobId}`, config);
+        
+        // Update the jobs list by removing the deleted job
+        setJobs(jobs.filter(job => job._id !== jobId));
+      }
       
       setDeleteLoading(false);
     } catch (err) {

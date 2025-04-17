@@ -270,6 +270,19 @@ const PostJobPage = () => {
     }
   };
   
+  // Helper function to get token from storage based on user ID
+  const getAuthToken = (userId) => {
+    // Try session storage first
+    let token = sessionStorage.getItem(`jobswipe_token_${userId}`);
+    
+    // If not in session storage, try local storage
+    if (!token) {
+      token = localStorage.getItem(`jobswipe_token_${userId}`);
+    }
+    
+    return token;
+  };
+  
   // Load job data if in edit mode
   useEffect(() => {
     const fetchJobForEditing = async () => {
@@ -278,8 +291,22 @@ const PostJobPage = () => {
       try {
         setLoading(true);
         
-        // Get the auth token from localStorage
-        const token = localStorage.getItem('token');
+        if (!user || !user._id) {
+          console.error('No authenticated user found');
+          setError('Authentication error. Please log in again.');
+          setLoading(false);
+          return;
+        }
+        
+        // Get the auth token using our helper function
+        const token = getAuthToken(user._id);
+        
+        if (!token) {
+          console.error('No authentication token found');
+          setError('Authentication token not found. Please log in again.');
+          setLoading(false);
+          return;
+        }
         
         // Configure headers for the request
         const config = {
@@ -340,6 +367,29 @@ const PostJobPage = () => {
     setError('');
     
     try {
+      if (!user || !user._id) {
+        setError('Authentication error. Please log in again.');
+        setLoading(false);
+        return;
+      }
+      
+      // Get the auth token using our helper function
+      const token = getAuthToken(user._id);
+      
+      if (!token) {
+        setError('Authentication token not found. Please log in again.');
+        setLoading(false);
+        return;
+      }
+      
+      // Configure headers for the request
+      const config = {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-auth-token': token
+        }
+      };
+      
       // Convert salary strings to numbers if they exist
       const submitData = {
         ...formData,
@@ -352,10 +402,10 @@ const PostJobPage = () => {
       // Check if we're editing or creating
       if (isEditMode && editJobId) {
         // Update existing job
-        response = await axios.put(`/api/jobs/${editJobId}`, submitData);
+        response = await axios.put(`/api/jobs/${editJobId}`, submitData, config);
       } else {
         // Create new job
-        response = await axios.post('/api/jobs', submitData);
+        response = await axios.post('/api/jobs', submitData, config);
       }
       
       console.log('Job operation successful:', response.data);
@@ -363,7 +413,6 @@ const PostJobPage = () => {
       setSuccess(true);
       setLoading(false);
       
-      // No automatic navigation - user will need to click a button
     } catch (err) {
       console.error(`Error ${isEditMode ? 'updating' : 'posting'} job:`, err);
       setError(err.response?.data?.message || `Failed to ${isEditMode ? 'update' : 'post'} job. Please try again.`);

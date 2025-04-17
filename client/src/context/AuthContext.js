@@ -7,34 +7,42 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Helper functions to create user-specific storage keys
+  const getTokenKey = (userId) => `jobswipe_token_${userId}`;
+  const getUserKey = (userId) => `jobswipe_user_${userId}`;
+  const getCurrentUserIdKey = () => 'jobswipe_current_user_id';
 
   // Load user from storage on initial load
   useEffect(() => {
     const loadUserState = () => {
-      // First try to get from sessionStorage (tab-specific)
-      const sessionToken = sessionStorage.getItem('token');
-      const sessionUser = sessionStorage.getItem('user');
-      
-      if (sessionToken && sessionUser) {
-        setUser(JSON.parse(sessionUser));
-        // Set auth token header
-        axios.defaults.headers.common['Authorization'] = `Bearer ${sessionToken}`;
-        setLoading(false);
-        return;
-      }
-      
-      // If not in sessionStorage, try localStorage (persistent)
-      const localToken = localStorage.getItem('token');
-      const localUser = localStorage.getItem('user');
-      
-      if (localToken && localUser) {
-        // Load from localStorage (persistent login)
-        setUser(JSON.parse(localUser));
-        axios.defaults.headers.common['Authorization'] = `Bearer ${localToken}`;
+      try {
+        // Get the current active user ID
+        const currentUserId = sessionStorage.getItem(getCurrentUserIdKey()) || 
+                              localStorage.getItem(getCurrentUserIdKey());
         
-        // Also set in sessionStorage for this tab
-        sessionStorage.setItem('token', localToken);
-        sessionStorage.setItem('user', localUser);
+        if (!currentUserId) {
+          setLoading(false);
+          return;
+        }
+        
+        // Try session storage first (tab-specific)
+        let token = sessionStorage.getItem(getTokenKey(currentUserId));
+        let userData = sessionStorage.getItem(getUserKey(currentUserId));
+        
+        // If not found in session storage, try local storage (persistent)
+        if (!token || !userData) {
+          token = localStorage.getItem(getTokenKey(currentUserId));
+          userData = localStorage.getItem(getUserKey(currentUserId));
+        }
+        
+        if (token && userData) {
+          const parsedUser = JSON.parse(userData);
+          setUser(parsedUser);
+          axios.defaults.headers.common['x-auth-token'] = token;
+        }
+      } catch (err) {
+        console.error('Error loading auth state:', err);
       }
       
       setLoading(false);
@@ -50,18 +58,25 @@ export const AuthProvider = ({ children }) => {
       const res = await axios.post('/api/auth/register', userData);
       
       if (res.data.success) {
-        // Store in both storages by default on registration
-        sessionStorage.setItem('token', res.data.token);
-        sessionStorage.setItem('user', JSON.stringify(res.data.user));
+        const { token, user: newUser } = res.data;
+        const userId = newUser._id;
+        
+        // Store user ID as the current active user
+        sessionStorage.setItem(getCurrentUserIdKey(), userId);
+        localStorage.setItem(getCurrentUserIdKey(), userId);
+        
+        // Store token and user data in user-specific storage
+        sessionStorage.setItem(getTokenKey(userId), token);
+        sessionStorage.setItem(getUserKey(userId), JSON.stringify(newUser));
         
         // Also store in localStorage for persistence
-        localStorage.setItem('token', res.data.token);
-        localStorage.setItem('user', JSON.stringify(res.data.user));
+        localStorage.setItem(getTokenKey(userId), token);
+        localStorage.setItem(getUserKey(userId), JSON.stringify(newUser));
         
         // Set auth token header
-        axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
+        axios.defaults.headers.common['x-auth-token'] = token;
         
-        setUser(res.data.user);
+        setUser(newUser);
         setError(null);
       }
     } catch (err) {
@@ -78,20 +93,27 @@ export const AuthProvider = ({ children }) => {
       const res = await axios.post('/api/auth/login', userData);
       
       if (res.data.success) {
-        // Always store in sessionStorage (current tab)
-        sessionStorage.setItem('token', res.data.token);
-        sessionStorage.setItem('user', JSON.stringify(res.data.user));
+        const { token, user: loggedInUser } = res.data;
+        const userId = loggedInUser._id;
         
-        // If remember me is checked, also store in localStorage
+        // Always store current user ID in session storage (tab-specific)
+        sessionStorage.setItem(getCurrentUserIdKey(), userId);
+        
+        // Always store user data and token in session storage (tab-specific)
+        sessionStorage.setItem(getTokenKey(userId), token);
+        sessionStorage.setItem(getUserKey(userId), JSON.stringify(loggedInUser));
+        
+        // If remember me is checked, also store in local storage
         if (rememberMe) {
-          localStorage.setItem('token', res.data.token);
-          localStorage.setItem('user', JSON.stringify(res.data.user));
+          localStorage.setItem(getCurrentUserIdKey(), userId);
+          localStorage.setItem(getTokenKey(userId), token);
+          localStorage.setItem(getUserKey(userId), JSON.stringify(loggedInUser));
         }
         
         // Set auth token header
-        axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
+        axios.defaults.headers.common['x-auth-token'] = token;
         
-        setUser(res.data.user);
+        setUser(loggedInUser);
         setError(null);
         return true;
       } else {
@@ -107,17 +129,21 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Logout user (from current tab)
+  // Logout user
   const logout = () => {
-    // Clear sessionStorage (current tab)
-    sessionStorage.removeItem('token');
-    sessionStorage.removeItem('user');
+    if (user && user._id) {
+      // Clear user-specific storage
+      sessionStorage.removeItem(getTokenKey(user._id));
+      sessionStorage.removeItem(getUserKey(user._id));
+      localStorage.removeItem(getTokenKey(user._id));
+      localStorage.removeItem(getUserKey(user._id));
+    }
     
-    // Also clear localStorage to ensure complete logout
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    // Clear current user ID
+    sessionStorage.removeItem(getCurrentUserIdKey());
+    localStorage.removeItem(getCurrentUserIdKey());
     
-    delete axios.defaults.headers.common['Authorization'];
+    delete axios.defaults.headers.common['x-auth-token'];
     setUser(null);
   };
 
