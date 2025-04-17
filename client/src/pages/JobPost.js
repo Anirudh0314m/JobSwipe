@@ -13,7 +13,8 @@ import { getCompanyLogo } from '../utils/companyLogos';
 const locationSuggestions = ['Remote', 'Remote - US Only', ...countries, ...usStates.map(state => `${state}, USA`)];
 
 const PostJobPage = () => {
-  const { user } = useContext(AuthContext);
+  // Get user and loading state from AuthContext
+  const { user, loading: authLoading } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation(); // Get location for query params
   
@@ -283,6 +284,12 @@ const PostJobPage = () => {
     return token;
   };
   
+  // Get current user ID from storage
+  const getCurrentUserId = () => {
+    return sessionStorage.getItem('jobswipe_current_user_id') || 
+           localStorage.getItem('jobswipe_current_user_id');
+  };
+  
   // Load job data if in edit mode
   useEffect(() => {
     const fetchJobForEditing = async () => {
@@ -291,63 +298,126 @@ const PostJobPage = () => {
       try {
         setLoading(true);
         
+        // Wait for auth context to finish loading
+        if (authLoading) {
+          return; // Will try again when authLoading changes
+        }
+        
+        // Check for user in AuthContext
         if (!user || !user._id) {
-          console.error('No authenticated user found');
-          setError('Authentication error. Please log in again.');
-          setLoading(false);
-          return;
-        }
-        
-        // Get the auth token using our helper function
-        const token = getAuthToken(user._id);
-        
-        if (!token) {
-          console.error('No authentication token found');
-          setError('Authentication token not found. Please log in again.');
-          setLoading(false);
-          return;
-        }
-        
-        // Configure headers for the request
-        const config = {
-          headers: {
-            'Content-Type': 'application/json',
-            'x-auth-token': token
+          // Try to get user ID from storage directly
+          const userId = getCurrentUserId();
+          
+          if (!userId) {
+            console.error('No authenticated user found');
+            setError('Authentication error. Please log in again.');
+            setLoading(false);
+            return;
           }
-        };
-        
-        // Fetch the job data
-        const response = await axios.get(`/api/jobs/${editJobId}`, config);
-        const jobData = response.data.data || response.data;
-        
-        setIsEditMode(true);
-        
-        // Update form data with job values
-        setFormData({
-          ...formData,
-          title: jobData.title || '',
-          company: jobData.company || user?.company || '',
-          description: jobData.description || '',
-          requirements: jobData.requirements || '',
-          location: jobData.location || '',
-          isRemote: jobData.isRemote || false,
-          country: jobData.country || '',
-          city: jobData.city || '',
-          salary: jobData.salary || '',
-          salaryMin: jobData.salaryMin || '',
-          salaryMax: jobData.salaryMax || '',
-          salaryPeriod: jobData.salaryPeriod || 'yearly',
-          employmentType: jobData.employmentType || 'Full-time',
-          workSchedule: jobData.workSchedule || [],
-          benefits: jobData.benefits || [],
-          education: jobData.education || 'None',
-          experience: jobData.experience || 'No experience',
-          applicationInstructions: jobData.applicationInstructions || '',
-          applicationDeadline: jobData.applicationDeadline ? new Date(jobData.applicationDeadline).toISOString().split('T')[0] : '',
-          skills: jobData.skills || [],
-          screeningQuestions: jobData.screeningQuestions || [],
-          phoneNumber: jobData.phoneNumber || ''
-        });
+          
+          // Get auth token using user ID from storage
+          const token = getAuthToken(userId);
+          
+          if (!token) {
+            console.error('No authentication token found');
+            setError('Authentication token not found. Please log in again.');
+            setLoading(false);
+            return;
+          }
+          
+          // Configure headers for the request
+          const config = {
+            headers: {
+              'Content-Type': 'application/json',
+              'x-auth-token': token
+            }
+          };
+          
+          // Fetch the job data
+          const response = await axios.get(`/api/jobs/${editJobId}`, config);
+          const jobData = response.data.data || response.data;
+          
+          setIsEditMode(true);
+          
+          // Update form data with job values
+          setFormData({
+            ...formData,
+            title: jobData.title || '',
+            company: jobData.company || '',
+            description: jobData.description || '',
+            requirements: jobData.requirements || '',
+            location: jobData.location || '',
+            isRemote: jobData.isRemote || false,
+            country: jobData.country || '',
+            city: jobData.city || '',
+            salary: jobData.salary || '',
+            salaryMin: jobData.salaryMin || '',
+            salaryMax: jobData.salaryMax || '',
+            salaryPeriod: jobData.salaryPeriod || 'yearly',
+            employmentType: jobData.employmentType || 'Full-time',
+            workSchedule: jobData.workSchedule || [],
+            benefits: jobData.benefits || [],
+            education: jobData.education || 'None',
+            experience: jobData.experience || 'No experience',
+            applicationInstructions: jobData.applicationInstructions || '',
+            applicationDeadline: jobData.applicationDeadline ? new Date(jobData.applicationDeadline).toISOString().split('T')[0] : '',
+            skills: jobData.skills || [],
+            screeningQuestions: jobData.screeningQuestions || [],
+            phoneNumber: jobData.phoneNumber || ''
+          });
+          
+        } else {
+          // Normal flow when user is available in AuthContext
+          const token = getAuthToken(user._id);
+          
+          if (!token) {
+            console.error('No authentication token found');
+            setError('Authentication token not found. Please log in again.');
+            setLoading(false);
+            return;
+          }
+          
+          // Configure headers for the request
+          const config = {
+            headers: {
+              'Content-Type': 'application/json',
+              'x-auth-token': token
+            }
+          };
+          
+          // Fetch the job data
+          const response = await axios.get(`/api/jobs/${editJobId}`, config);
+          const jobData = response.data.data || response.data;
+          
+          setIsEditMode(true);
+          
+          // Update form data with job values
+          setFormData({
+            ...formData,
+            title: jobData.title || '',
+            company: jobData.company || user?.company || '',
+            description: jobData.description || '',
+            requirements: jobData.requirements || '',
+            location: jobData.location || '',
+            isRemote: jobData.isRemote || false,
+            country: jobData.country || '',
+            city: jobData.city || '',
+            salary: jobData.salary || '',
+            salaryMin: jobData.salaryMin || '',
+            salaryMax: jobData.salaryMax || '',
+            salaryPeriod: jobData.salaryPeriod || 'yearly',
+            employmentType: jobData.employmentType || 'Full-time',
+            workSchedule: jobData.workSchedule || [],
+            benefits: jobData.benefits || [],
+            education: jobData.education || 'None',
+            experience: jobData.experience || 'No experience',
+            applicationInstructions: jobData.applicationInstructions || '',
+            applicationDeadline: jobData.applicationDeadline ? new Date(jobData.applicationDeadline).toISOString().split('T')[0] : '',
+            skills: jobData.skills || [],
+            screeningQuestions: jobData.screeningQuestions || [],
+            phoneNumber: jobData.phoneNumber || ''
+          });
+        }
         
         setLoading(false);
       } catch (err) {
@@ -358,7 +428,7 @@ const PostJobPage = () => {
     };
     
     fetchJobForEditing();
-  }, [editJobId, user]);
+  }, [editJobId, user, authLoading, formData]);
   
   // Modify handleSubmit to support both creating and updating jobs
   const handleSubmit = async (e) => {
