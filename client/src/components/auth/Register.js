@@ -6,7 +6,6 @@ import { FiUser, FiMail, FiLock, FiBriefcase, FiArrowRight, FiCheckCircle } from
 import Confetti from 'react-confetti';
 import SuccessAnimation from '../common/SuccessAnimation';
 import { MouseProvider } from '../layout/MouseTracker';
-import CursorEffect from '../common/CursorEffect';
 import TiltCard from '../common/TiltCard'; 
 import ParallaxElement from '../layout/Parallax';
 
@@ -186,11 +185,6 @@ const Register = () => {
   return (
     <MouseProvider>
       <div className="min-h-screen relative overflow-hidden dark:bg-gray-900">
-        {/* Cursor effect */}
-        <CursorEffect />
-        
-        {/* Removing the Dark mode toggle since it's now only on Home page */}
-        
         {/* Background elements */}
         <ParticleNetwork />
         <div className="absolute top-0 left-0 right-0 bottom-0 bg-gradient-to-br from-blue-100/80 to-indigo-100/80 dark:from-gray-800/80 dark:to-indigo-900/80 -z-4"></div>
