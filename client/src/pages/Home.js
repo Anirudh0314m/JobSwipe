@@ -5,6 +5,7 @@ import JobCard from '../components/jobs/JobCard';
 import ParticleNetwork from '../components/layout/ParticleNetwork';
 import { MouseProvider } from '../components/layout/MouseTracker';
 import ParallaxElement from '../components/layout/Parallax';
+import DarkModeToggle from '../components/common/DarkModeToggle';
 
 // Sample job data for the animation
 const sampleJobs = [
@@ -107,7 +108,12 @@ const Home = () => {
       <div className="relative min-h-[80vh] overflow-hidden">
         {/* Background elements */}
         <ParticleNetwork />
-        <div className="absolute top-0 left-0 right-0 bottom-0 bg-gradient-to-br from-blue-100/80 to-indigo-100/80 -z-4"></div>
+        <div className="absolute top-0 left-0 right-0 bottom-0 bg-gradient-to-br from-blue-100/80 to-indigo-100/80 dark:from-gray-800/80 dark:to-indigo-900/80 -z-4"></div>
+        
+        {/* Dark mode toggle */}
+        <div className="absolute top-4 right-4 z-30">
+          <DarkModeToggle />
+        </div>
         
         {/* Parallax floating elements */}
         <ParallaxElement depth={-2} className="absolute top-[10%] right-[15%] z-0 opacity-50">
