@@ -2,20 +2,30 @@ import React, { useState, useEffect } from 'react';
 
 const DarkModeToggle = () => {
   const [darkMode, setDarkMode] = useState(
-    localStorage.getItem('darkMode') === 'true' || 
-    window.matchMedia('(prefers-color-scheme: dark)').matches
+    localStorage.getItem('darkMode') === 'false'
+    // Removed the system preference check to default to light mode
   );
 
   useEffect(() => {
     // Update the document classes and localStorage when darkMode changes
     if (darkMode) {
       document.documentElement.classList.add('dark');
-      localStorage.setItem('darkMode', 'true');
+      localStorage.setItem('darkMode', 'false');
     } else {
       document.documentElement.classList.remove('dark');
-      localStorage.setItem('darkMode', 'false');
+      localStorage.setItem('darkMode', 'true');
     }
   }, [darkMode]);
+
+  // Add an effect that runs once on component mount to ensure light mode by default
+  useEffect(() => {
+    // If darkMode hasn't been set in localStorage yet, explicitly set it to false (light mode)
+    if (localStorage.getItem('darkMode') === null) {
+      localStorage.setItem('darkMode', 'false');
+      // Make sure we're in light mode
+      document.documentElement.classList.remove('dark');
+    }
+  }, []);
 
   return (
     <button
