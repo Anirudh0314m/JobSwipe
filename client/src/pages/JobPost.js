@@ -437,16 +437,26 @@ const PostJobPage = () => {
     setError('');
     
     try {
-      if (!user || !user._id) {
-        setError('Authentication error. Please log in again.');
-        setLoading(false);
-        return;
+      // First try to use user from AuthContext
+      let userId = user?._id;
+      
+      // If not available, try to get user ID from storage
+      if (!userId) {
+        userId = getCurrentUserId();
+        
+        if (!userId) {
+          console.error('No authenticated user found');
+          setError('Authentication error. Please log in again.');
+          setLoading(false);
+          return;
+        }
       }
       
       // Get the auth token using our helper function
-      const token = getAuthToken(user._id);
+      const token = getAuthToken(userId);
       
       if (!token) {
+        console.error('Authentication token not found');
         setError('Authentication token not found. Please log in again.');
         setLoading(false);
         return;
