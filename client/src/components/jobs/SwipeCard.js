@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, useMotionValue, useTransform } from 'framer-motion';
 
-const SwipeCard = ({ job, onSwipe, matchScore, isRecommended }) => {
+const SwipeCard = ({ job, onSwipe }) => {
   // Track card position for swipe gestures
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-20, 20]);
@@ -10,9 +10,12 @@ const SwipeCard = ({ job, onSwipe, matchScore, isRecommended }) => {
   const rightOpacity = useTransform(x, [0, 100], [0, 1]);
   const leftOpacity = useTransform(x, [-100, 0], [1, 0]);
   
+  // Log the job object to debug
+  console.log('SwipeCard received job:', job);
+  
   // Format match score as percentage if available
-  const formattedMatchScore = matchScore !== undefined 
-    ? `${Math.round(matchScore * 100)}%` 
+  const formattedMatchScore = job?.matchScore !== undefined 
+    ? `${Math.round(job.matchScore * 100)}%` 
     : null;
   
   // Handle drag end
@@ -70,7 +73,7 @@ const SwipeCard = ({ job, onSwipe, matchScore, isRecommended }) => {
           )}
           
           {/* AI Recommendation Badge */}
-          {isRecommended && (
+          {job?.isRecommended && (
             <div className="absolute top-3 left-3 bg-green-100 px-3 py-1 rounded-full shadow-md">
               <div className="flex items-center gap-1">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-600" viewBox="0 0 20 20" fill="currentColor">
@@ -84,14 +87,14 @@ const SwipeCard = ({ job, onSwipe, matchScore, isRecommended }) => {
           )}
           
           <div className="bg-white/90 backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg inline-block z-10">
-            <h3 className="text-xl font-bold text-gray-800">{job.title}</h3>
-            <p className="text-gray-600">{job.company}</p>
+            <h3 className="text-xl font-bold text-gray-800">{job?.title || 'Untitled Position'}</h3>
+            <p className="text-gray-600">{job?.company || 'Unknown Company'}</p>
           </div>
         </div>
         
         <div className="p-5">
           <div className="mt-3 flex flex-wrap gap-2">
-            {job.skills && job.skills.map((skill, i) => (
+            {job?.skills && Array.isArray(job.skills) && job.skills.map((skill, i) => (
               <span key={i} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
                 {skill}
               </span>
@@ -99,12 +102,12 @@ const SwipeCard = ({ job, onSwipe, matchScore, isRecommended }) => {
           </div>
           
           <div className="mt-4">
-            <p className="text-gray-700">{job.description}</p>
+            <p className="text-gray-700">{job?.description || 'No description provided'}</p>
           </div>
           
           <div className="mt-4 flex justify-between items-center">
-            <p className="text-gray-500">{job.location}</p>
-            <p className="font-semibold text-gray-800">{job.salary}</p>
+            <p className="text-gray-500">{job?.location || 'Remote/Flexible'}</p>
+            <p className="font-semibold text-gray-800">{job?.salary || 'Competitive'}</p>
           </div>
           
           <div className="mt-6 flex justify-center gap-8">

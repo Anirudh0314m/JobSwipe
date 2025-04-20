@@ -20,12 +20,16 @@ const SwipePage = () => {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   
+  // Add state for debugging
+  const [debugMessage, setDebugMessage] = useState('');
+  
   useEffect(() => {
     const fetchRecommendedJobs = async () => {
       setLoading(true);
       try {
         // Get AI-recommended jobs based on user's skills/resume
         const response = await api.get('/api/jobs/recommended/skills');
+        console.log('API response:', response.data);
         
         if (response.data.message) {
           // Show message if no skills found
@@ -37,8 +41,35 @@ const SwipePage = () => {
           setUserSkills(response.data.userSkills);
         }
         
-        // Set jobs from API, sorted by match score
-        const recommendedJobs = response.data.data;
+        // Process jobs from API to ensure they have all required fields
+        let recommendedJobs = [];
+        if (response.data.data && response.data.data.length > 0) {
+          // Debug the first job to understand structure
+          const firstJob = response.data.data[0];
+          setDebugMessage(`First job structure: ${JSON.stringify(firstJob)}`);
+          console.log('First job:', firstJob);
+          
+          recommendedJobs = response.data.data.map(job => {
+            // Extract job data from _doc if it exists (common with Mongoose documents)
+            // This handles both Mongoose document format and regular JSON objects
+            const jobData = job._doc || job;
+            
+            // Use extracted data with fallbacks for missing fields
+            return {
+              id: jobData._id || jobData.id,
+              title: jobData.title || 'Untitled Position',
+              company: jobData.company || 'Unknown Company',
+              description: jobData.description || 'No description provided',
+              location: jobData.location || 'Remote/Flexible',
+              salary: jobData.salary || 'Competitive',
+              skills: Array.isArray(jobData.skills) ? jobData.skills : [],
+              matchScore: job.matchScore || 0, // matchScore might be at the top level
+              isRecommended: job.isRecommended === true,
+              poster: jobData.poster
+            };
+          });
+        }
+        
         setJobs(recommendedJobs);
         
         // Show a welcome toast if we have skills and recommendations
@@ -49,6 +80,8 @@ const SwipePage = () => {
         }
       } catch (error) {
         console.error('Error fetching recommended jobs:', error);
+        setDebugMessage(`Error: ${error.message}`);
+        
         // Fall back to sample data if API call fails
         const sampleJobs = [
           {
