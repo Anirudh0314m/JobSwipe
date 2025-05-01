@@ -3,6 +3,7 @@ import { AuthContext } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import SwipeCard from '../components/jobs/SwipeCard';
 import api from '../utils/api';
+import { Link } from 'react-router-dom';
 
 const SwipePage = () => {
   const { user } = useContext(AuthContext);
@@ -187,13 +188,46 @@ const SwipePage = () => {
     
     // If swiped right, add to matches
     if (swipeDirection === 'right') {
-      // In a real app, you would send this to your API
-      console.log(`Matched with job: ${currentJob.id}`);
-      setMatches(prev => [...prev, {
+      // Create new match object with timestamp
+      const newMatch = {
         ...currentJob,
         matchedOn: new Date().toISOString(),
         status: 'new'
-      }]);
+      };
+      
+      // Update local state
+      setMatches(prev => [...prev, newMatch]);
+      
+      // Persist matches to localStorage
+      try {
+        // Get existing matches from localStorage
+        const existingMatches = localStorage.getItem('jobMatches');
+        let updatedMatches = [];
+        
+        if (existingMatches) {
+          updatedMatches = JSON.parse(existingMatches);
+          // Avoid duplicates
+          if (!updatedMatches.some(match => match.id === newMatch.id)) {
+            updatedMatches.push(newMatch);
+          }
+        } else {
+          updatedMatches = [newMatch];
+        }
+        
+        // Save back to localStorage
+        localStorage.setItem('jobMatches', JSON.stringify(updatedMatches));
+        
+        console.log(`Matched with job: ${currentJob.id} and saved to localStorage`);
+      } catch (error) {
+        console.error('Error saving match to localStorage:', error);
+      }
+      
+      // In a real app, you would also send this to your API
+      // try {
+      //   await api.post('/api/matches', newMatch);
+      // } catch (err) {
+      //   console.error('Error saving match to API:', err);
+      // }
       
       // Show toast notification
       setToastMessage(`Matched with ${currentJob.title} at ${currentJob.company}!`);
@@ -205,7 +239,7 @@ const SwipePage = () => {
       }, 3000);
     }
     
-    // Log the swipe action (would send to API in real app)
+    // Log the swipe action
     console.log(`Swiped ${swipeDirection} on job ${currentJob.id}`);
     
     // Move to next card
@@ -241,6 +275,19 @@ const SwipePage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 px-4 py-6">
       <div className="max-w-5xl mx-auto"> {/* Increased max-width for two-column layout */}
+        
+        {/* Add navigation to matches page */}
+        <div className="flex justify-end mb-4">
+          <Link 
+            to="/matches"
+            className="px-4 py-2 bg-white text-blue-600 rounded-lg shadow hover:bg-blue-50 transition-colors flex items-center gap-1"
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+            Your Matches {matches.length > 0 && <span className="bg-blue-600 text-white text-xs rounded-full px-1.5 py-0.5">{matches.length}</span>}
+          </Link>
+        </div>
         
         {/* Two-column layout container */}
         <div className="flex flex-col md:flex-row md:gap-8">
