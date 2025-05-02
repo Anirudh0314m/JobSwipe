@@ -11,6 +11,8 @@ const SwipePage = () => {
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [matches, setMatches] = useState([]);
+  const [seenJobs, setSeenJobs] = useState([]); // Track jobs user has already swiped on
+  const [totalViewedJobs, setTotalViewedJobs] = useState(0); // Track total jobs viewed across sessions
   const [userSkills, setUserSkills] = useState([]);
   const [noSkillsMessage, setNoSkillsMessage] = useState('');
   
@@ -23,6 +25,47 @@ const SwipePage = () => {
   
   // Add state for debugging
   const [debugMessage, setDebugMessage] = useState('');
+  
+  // Add filter states
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    location: '',
+    minSalary: 0,
+    maxSalary: 250000,
+    experienceLevel: [],
+    jobType: [],
+    skills: []
+  });
+  
+  // Filtered jobs state
+  const [filteredJobs, setFilteredJobs] = useState([]);
+  
+  // Load matches and seen jobs from localStorage on component mount
+  useEffect(() => {
+    // Load matches from localStorage
+    try {
+      const storedMatches = localStorage.getItem('jobMatches');
+      if (storedMatches) {
+        const parsedMatches = JSON.parse(storedMatches);
+        setMatches(parsedMatches);
+      }
+      
+      // Load seen jobs from localStorage
+      const storedSeenJobs = localStorage.getItem('seenJobs');
+      if (storedSeenJobs) {
+        const parsedSeenJobs = JSON.parse(storedSeenJobs);
+        setSeenJobs(parsedSeenJobs);
+      }
+      
+      // Load total viewed jobs counter
+      const storedViewedCount = localStorage.getItem('totalViewedJobs');
+      if (storedViewedCount) {
+        setTotalViewedJobs(parseInt(storedViewedCount, 10));
+      }
+    } catch (error) {
+      console.error('Error loading data from localStorage:', error);
+    }
+  }, []);
   
   useEffect(() => {
     const fetchRecommendedJobs = async () => {
@@ -109,11 +152,17 @@ const SwipePage = () => {
           
         }
         
-        setJobs(recommendedJobs);
+        // Filter out jobs the user has already seen
+        const filteredJobs = recommendedJobs.filter(job => 
+          !seenJobs.includes(job.id) && 
+          !matches.some(match => match.id === job.id)
+        );
+        
+        setJobs(filteredJobs);
         
         // Show a welcome toast if we have skills and recommendations
         if (response.data.userSkills && response.data.userSkills.length > 0) {
-          setToastMessage(`Found ${recommendedJobs.length} jobs matching your skills!`);
+          setToastMessage(`Found ${filteredJobs.length} jobs matching your skills!`);
           setShowToast(true);
           setTimeout(() => setShowToast(false), 3000);
         }
@@ -169,14 +218,104 @@ const SwipePage = () => {
             skills: ["AWS", "Docker", "Kubernetes"]
           }
         ];
-        setJobs(sampleJobs);
+        
+        // Filter out jobs the user has already seen
+        const filteredSampleJobs = sampleJobs.filter(job => 
+          !seenJobs.includes(job.id) && 
+          !matches.some(match => match.id === job.id)
+        );
+        
+        setJobs(filteredSampleJobs);
       } finally {
         setLoading(false);
       }
     };
     
     fetchRecommendedJobs();
-  }, []);
+  }, [seenJobs, matches]); // Re-run when seenJobs or matches change
+  
+  // Apply filters to jobs
+  useEffect(() => {
+    if (jobs.length === 0) {
+      setFilteredJobs([]);
+      return;
+    }
+    
+    let result = [...jobs];
+    
+    // Filter by location
+    if (filters.location) {
+      result = result.filter(job => 
+        job.location && job.location.toLowerCase().includes(filters.location.toLowerCase())
+      );
+    }
+    
+    // Filter by salary
+    if (filters.minSalary > 0) {
+      result = result.filter(job => {
+        if (job.salaryMin) return job.salaryMin >= filters.minSalary;
+        if (typeof job.salary === 'string') {
+          const match = job.salary.match(/(\d+)/g);
+          return match && parseInt(match[0], 10) >= filters.minSalary;
+        }
+        return true;
+      });
+    }
+    
+    if (filters.maxSalary < 250000) {
+      result = result.filter(job => {
+        if (job.salaryMax) return job.salaryMax <= filters.maxSalary;
+        if (typeof job.salary === 'string') {
+          const match = job.salary.match(/(\d+)/g);
+          return match && parseInt(match[match.length-1], 10) <= filters.maxSalary;
+        }
+        return true;
+      });
+    }
+    
+    // Filter by experience level
+    if (filters.experienceLevel.length > 0) {
+      result = result.filter(job => 
+        filters.experienceLevel.includes(job.experienceLevel)
+      );
+    }
+    
+    // Filter by job type
+    if (filters.jobType.length > 0) {
+      result = result.filter(job => 
+        filters.jobType.some(type => job.title.toLowerCase().includes(type.toLowerCase()))
+      );
+    }
+    
+    // Filter by skills
+    if (filters.skills.length > 0) {
+      result = result.filter(job => 
+        job.skills && filters.skills.some(skill => 
+          job.skills.some(jobSkill => 
+            jobSkill.toLowerCase().includes(skill.toLowerCase())
+          )
+        )
+      );
+    }
+    
+    // Reset current index when filters change
+    setCurrentIndex(0);
+    setFilteredJobs(result);
+    
+  }, [jobs, filters]);
+  
+  // Handle filter changes
+  const handleFilterChange = (filterName, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterName]: value
+    }));
+  };
+  
+  // Toggle filters visibility
+  const toggleFilters = () => {
+    setShowFilters(prev => !prev);
+  };
   
   const handleSwipe = (swipeDirection) => {
     if (currentIndex >= jobs.length) return;
@@ -185,6 +324,19 @@ const SwipePage = () => {
     setDirection(swipeDirection);
     
     const currentJob = jobs[currentIndex];
+    
+    // Add job ID to seen jobs list regardless of swipe direction
+    const jobId = currentJob.id;
+    const updatedSeenJobs = [...seenJobs, jobId];
+    setSeenJobs(updatedSeenJobs);
+    
+    // Save seen jobs to localStorage
+    localStorage.setItem('seenJobs', JSON.stringify(updatedSeenJobs));
+    
+    // Increment and save the total viewed jobs counter
+    const newTotalViewed = totalViewedJobs + 1;
+    setTotalViewedJobs(newTotalViewed);
+    localStorage.setItem('totalViewedJobs', newTotalViewed.toString());
     
     // If swiped right, add to matches
     if (swipeDirection === 'right') {
@@ -196,27 +348,12 @@ const SwipePage = () => {
       };
       
       // Update local state
-      setMatches(prev => [...prev, newMatch]);
+      const updatedMatches = [...matches, newMatch];
+      setMatches(updatedMatches);
       
       // Persist matches to localStorage
       try {
-        // Get existing matches from localStorage
-        const existingMatches = localStorage.getItem('jobMatches');
-        let updatedMatches = [];
-        
-        if (existingMatches) {
-          updatedMatches = JSON.parse(existingMatches);
-          // Avoid duplicates
-          if (!updatedMatches.some(match => match.id === newMatch.id)) {
-            updatedMatches.push(newMatch);
-          }
-        } else {
-          updatedMatches = [newMatch];
-        }
-        
-        // Save back to localStorage
         localStorage.setItem('jobMatches', JSON.stringify(updatedMatches));
-        
         console.log(`Matched with job: ${currentJob.id} and saved to localStorage`);
       } catch (error) {
         console.error('Error saving match to localStorage:', error);
@@ -276,8 +413,18 @@ const SwipePage = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 px-4 py-6">
       <div className="max-w-5xl mx-auto"> {/* Increased max-width for two-column layout */}
         
-        {/* Add navigation to matches page */}
-        <div className="flex justify-end mb-4">
+        {/* Navigation bar with filters toggle */}
+        <div className="flex justify-between items-center mb-4">
+          <button
+            onClick={toggleFilters}
+            className="px-4 py-2 bg-white text-blue-600 rounded-lg shadow hover:bg-blue-50 transition-colors flex items-center gap-1"
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 010 2H4a1 1 0 01-1-1zm0 8a1 1 0 011-1h10a1 1 0 110 2H4a1 1 0 01-1-1zm0 8a1 1 0 011-1h6a1 1 0 110 2H4a1 1 0 01-1-1z" />
+            </svg>
+            {showFilters ? 'Hide Filters' : 'Show Filters'}
+          </button>
+          
           <Link 
             to="/matches"
             className="px-4 py-2 bg-white text-blue-600 rounded-lg shadow hover:bg-blue-50 transition-colors flex items-center gap-1"
@@ -288,6 +435,127 @@ const SwipePage = () => {
             Your Matches {matches.length > 0 && <span className="bg-blue-600 text-white text-xs rounded-full px-1.5 py-0.5">{matches.length}</span>}
           </Link>
         </div>
+        
+        {/* Filter panel - shown/hidden based on showFilters state */}
+        {showFilters && (
+          <div className="bg-white p-4 rounded-lg shadow mb-6 transition-all">
+            <h3 className="font-semibold text-gray-800 mb-4">Filter Jobs</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Location filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                <input
+                  type="text"
+                  placeholder="City, state, or remote"
+                  value={filters.location}
+                  onChange={(e) => handleFilterChange('location', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              
+              {/* Salary range filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Salary Range: ${filters.minSalary.toLocaleString()} - ${filters.maxSalary.toLocaleString()}
+                </label>
+                <div className="flex gap-4">
+                  <input
+                    type="range"
+                    min="0"
+                    max="250000"
+                    step="10000"
+                    value={filters.minSalary}
+                    onChange={(e) => handleFilterChange('minSalary', parseInt(e.target.value, 10))}
+                    className="w-full"
+                  />
+                  <input
+                    type="range"
+                    min="0"
+                    max="250000"
+                    step="10000"
+                    value={filters.maxSalary}
+                    onChange={(e) => handleFilterChange('maxSalary', parseInt(e.target.value, 10))}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+              
+              {/* Experience level filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Experience Level</label>
+                <div className="flex flex-wrap gap-2">
+                  {['Entry Level', 'Mid Level', 'Senior', 'Manager'].map(level => (
+                    <label key={level} className="inline-flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={filters.experienceLevel.includes(level)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            handleFilterChange('experienceLevel', [...filters.experienceLevel, level]);
+                          } else {
+                            handleFilterChange('experienceLevel', 
+                              filters.experienceLevel.filter(l => l !== level)
+                            );
+                          }
+                        }}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">{level}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Skills filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Skills (Select from your skills)</label>
+                <div className="flex flex-wrap gap-2">
+                  {userSkills.map(skill => (
+                    <button
+                      key={skill}
+                      onClick={() => {
+                        if (filters.skills.includes(skill)) {
+                          handleFilterChange('skills', 
+                            filters.skills.filter(s => s !== skill)
+                          );
+                        } else {
+                          handleFilterChange('skills', [...filters.skills, skill]);
+                        }
+                      }}
+                      className={`px-3 py-1 rounded-full text-sm font-medium 
+                        ${filters.skills.includes(skill) 
+                          ? 'bg-blue-500 text-white' 
+                          : 'bg-blue-100 text-blue-800 hover:bg-blue-200'}`}
+                    >
+                      {skill}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-between mt-6">
+              <button
+                onClick={() => setFilters({
+                  location: '',
+                  minSalary: 0,
+                  maxSalary: 250000,
+                  experienceLevel: [],
+                  jobType: [],
+                  skills: []
+                })}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Reset Filters
+              </button>
+              
+              <span className="px-4 py-2 text-sm text-gray-600">
+                {filteredJobs.length} jobs match your filters
+              </span>
+            </div>
+          </div>
+        )}
         
         {/* Two-column layout container */}
         <div className="flex flex-col md:flex-row md:gap-8">
@@ -344,7 +612,7 @@ const SwipePage = () => {
             {/* Stats cards on smaller screens */}
             <div className="md:hidden grid grid-cols-3 gap-3 mb-6">
               <div className="bg-white p-3 rounded-lg shadow text-center">
-                <p className="text-xl font-bold text-blue-600">{currentIndex}</p>
+                <p className="text-xl font-bold text-blue-600">{totalViewedJobs}</p>
                 <p className="text-xs text-gray-500">Viewed</p>
               </div>
               <div className="bg-white p-3 rounded-lg shadow text-center">
@@ -358,29 +626,29 @@ const SwipePage = () => {
             </div>
           </div>
           
-          {/* Right column - Job card */}
+          {/* Right column - modify to use filteredJobs instead of jobs */}
           <div className="md:w-2/3 flex flex-col justify-between">
             {loading ? (
               <div className="flex justify-center items-center h-[60vh]">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
               </div>
-            ) : currentIndex < jobs.length ? (
+            ) : filteredJobs.length > 0 && currentIndex < filteredJobs.length ? (
               <div className="relative h-[70vh] w-full">
                 <div className="absolute inset-0 flex items-center justify-center">
                   {/* Card stack - show current and next card */}
                   <div className="relative w-full h-full max-w-md">
                     {/* Show next card behind */}
-                    {currentIndex + 1 < jobs.length && (
+                    {currentIndex + 1 < filteredJobs.length && (
                       <div className="absolute inset-0 transform scale-[0.92] -translate-y-2 rounded-xl overflow-hidden shadow-lg bg-white opacity-70 z-0" />
                     )}
                     
                     {/* Current card */}
-                    {currentIndex < jobs.length && (
+                    {currentIndex < filteredJobs.length && (
                       <SwipeCard 
-                        job={jobs[currentIndex]} 
+                        job={filteredJobs[currentIndex]} 
                         onSwipe={handleSwipe}
-                        matchScore={jobs[currentIndex].matchScore}
-                        isRecommended={jobs[currentIndex].isRecommended}
+                        matchScore={filteredJobs[currentIndex].matchScore}
+                        isRecommended={filteredJobs[currentIndex].isRecommended}
                       />
                     )}
                   </div>
@@ -388,7 +656,7 @@ const SwipePage = () => {
                 
                 {/* Progress indicator */}
                 <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1">
-                  {jobs.map((_, index) => (
+                  {filteredJobs.map((_, index) => (
                     <div 
                       key={index} 
                       className={`h-1.5 rounded-full ${
@@ -405,13 +673,39 @@ const SwipePage = () => {
                 <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                 </svg>
-                <h3 className="mt-2 text-lg font-medium text-gray-900">No more jobs to show</h3>
-                <p className="mt-1 text-sm text-gray-500">Check back later for new opportunities!</p>
+                <h3 className="mt-2 text-lg font-medium text-gray-900">
+                  {filters.location || filters.minSalary > 0 || filters.maxSalary < 250000 || 
+                   filters.experienceLevel.length > 0 || filters.skills.length > 0 
+                    ? "No jobs match your filters" 
+                    : "No more jobs to show"}
+                </h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  {filters.location || filters.minSalary > 0 || filters.maxSalary < 250000 || 
+                   filters.experienceLevel.length > 0 || filters.skills.length > 0 
+                    ? "Try adjusting your filters to see more opportunities" 
+                    : "Check back later for new opportunities!"}
+                </p>
                 <button 
-                  onClick={() => setCurrentIndex(0)}
+                  onClick={() => {
+                    setCurrentIndex(0);
+                    if (filters.location || filters.minSalary > 0 || filters.maxSalary < 250000 || 
+                        filters.experienceLevel.length > 0 || filters.skills.length > 0) {
+                      setFilters({
+                        location: '',
+                        minSalary: 0,
+                        maxSalary: 250000,
+                        experienceLevel: [],
+                        jobType: [],
+                        skills: []
+                      });
+                    }
+                  }}
                   className="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
                 >
-                  Start Over
+                  {filters.location || filters.minSalary > 0 || filters.maxSalary < 250000 || 
+                   filters.experienceLevel.length > 0 || filters.skills.length > 0 
+                    ? "Clear Filters" 
+                    : "Start Over"}
                 </button>
               </div>
             )}
@@ -421,7 +715,7 @@ const SwipePage = () => {
         {/* Stats row for larger screens */}
         <div className="hidden md:grid grid-cols-3 gap-6 mt-8">
           <div className="bg-white p-5 rounded-lg shadow text-center">
-            <p className="text-3xl font-bold text-blue-600">{currentIndex}</p>
+            <p className="text-3xl font-bold text-blue-600">{totalViewedJobs}</p>
             <p className="text-sm text-gray-500">Jobs Viewed</p>
           </div>
           <div className="bg-white p-5 rounded-lg shadow text-center">
